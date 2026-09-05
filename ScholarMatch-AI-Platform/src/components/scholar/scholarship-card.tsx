@@ -47,8 +47,8 @@ export function ScholarshipCard({ s }: { s: Scholarship }) {
       </div>
 
       <div className="flex items-center gap-5">
-        <ScoreRing value={s.match} label="Match" />
-        <ScoreRing value={s.readiness} tone="brand" label="Ready" />
+        <ScoreRing value={s.match} label="Profile Fit" />
+        <ScoreRing value={s.readiness} tone="brand" label="Readiness" />
         <div className="ml-auto flex flex-col items-end gap-2">
           <DaysBadge daysLeft={s.daysLeft} />
           <span className="text-[11px] text-brand-500">{s.degree}</span>

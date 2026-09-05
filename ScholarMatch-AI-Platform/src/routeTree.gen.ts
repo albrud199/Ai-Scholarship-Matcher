@@ -10,6 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as CopilotRouteImport } from './routes/copilot'
 import { Route as DeadlinesRouteImport } from './routes/deadlines'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as FundingRouteImport } from './routes/funding'
@@ -17,11 +20,27 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SopReviewerRouteImport } from './routes/sop-reviewer'
 import { Route as ScholarshipIdRouteImport } from './routes/scholarship.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopilotRoute = CopilotRouteImport.update({
+  id: '/copilot',
+  path: '/copilot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeadlinesRoute = DeadlinesRouteImport.update({
@@ -59,6 +78,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SopReviewerRoute = SopReviewerRouteImport.update({
+  id: '/sop-reviewer',
+  path: '/sop-reviewer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScholarshipIdRoute = ScholarshipIdRouteImport.update({
   id: '/scholarship/$id',
   path: '/scholarship/$id',
@@ -67,6 +91,9 @@ const ScholarshipIdRoute = ScholarshipIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
+  '/copilot': typeof CopilotRoute
   '/deadlines': typeof DeadlinesRoute
   '/documents': typeof DocumentsRoute
   '/funding': typeof FundingRoute
@@ -74,10 +101,14 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/roadmap': typeof RoadmapRoute
   '/signup': typeof SignupRoute
+  '/sop-reviewer': typeof SopReviewerRoute
   '/scholarship/$id': typeof ScholarshipIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
+  '/copilot': typeof CopilotRoute
   '/deadlines': typeof DeadlinesRoute
   '/documents': typeof DocumentsRoute
   '/funding': typeof FundingRoute
@@ -85,11 +116,15 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/roadmap': typeof RoadmapRoute
   '/signup': typeof SignupRoute
+  '/sop-reviewer': typeof SopReviewerRoute
   '/scholarship/$id': typeof ScholarshipIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/chat': typeof ChatRoute
+  '/copilot': typeof CopilotRoute
   '/deadlines': typeof DeadlinesRoute
   '/documents': typeof DocumentsRoute
   '/funding': typeof FundingRoute
@@ -97,12 +132,16 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/roadmap': typeof RoadmapRoute
   '/signup': typeof SignupRoute
+  '/sop-reviewer': typeof SopReviewerRoute
   '/scholarship/$id': typeof ScholarshipIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/chat'
+    | '/copilot'
     | '/deadlines'
     | '/documents'
     | '/funding'
@@ -110,10 +149,14 @@ export interface FileRouteTypes {
     | '/profile'
     | '/roadmap'
     | '/signup'
+    | '/sop-reviewer'
     | '/scholarship/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
+    | '/chat'
+    | '/copilot'
     | '/deadlines'
     | '/documents'
     | '/funding'
@@ -121,10 +164,14 @@ export interface FileRouteTypes {
     | '/profile'
     | '/roadmap'
     | '/signup'
+    | '/sop-reviewer'
     | '/scholarship/$id'
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/chat'
+    | '/copilot'
     | '/deadlines'
     | '/documents'
     | '/funding'
@@ -132,11 +179,15 @@ export interface FileRouteTypes {
     | '/profile'
     | '/roadmap'
     | '/signup'
+    | '/sop-reviewer'
     | '/scholarship/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  ChatRoute: typeof ChatRoute
+  CopilotRoute: typeof CopilotRoute
   DeadlinesRoute: typeof DeadlinesRoute
   DocumentsRoute: typeof DocumentsRoute
   FundingRoute: typeof FundingRoute
@@ -144,6 +195,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RoadmapRoute: typeof RoadmapRoute
   SignupRoute: typeof SignupRoute
+  SopReviewerRoute: typeof SopReviewerRoute
   ScholarshipIdRoute: typeof ScholarshipIdRoute
 }
 
@@ -154,6 +206,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copilot': {
+      id: '/copilot'
+      path: '/copilot'
+      fullPath: '/copilot'
+      preLoaderRoute: typeof CopilotRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deadlines': {
@@ -205,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sop-reviewer': {
+      id: '/sop-reviewer'
+      path: '/sop-reviewer'
+      fullPath: '/sop-reviewer'
+      preLoaderRoute: typeof SopReviewerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scholarship/$id': {
       id: '/scholarship/$id'
       path: '/scholarship/$id'
@@ -217,6 +297,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  ChatRoute: ChatRoute,
+  CopilotRoute: CopilotRoute,
   DeadlinesRoute: DeadlinesRoute,
   DocumentsRoute: DocumentsRoute,
   FundingRoute: FundingRoute,
@@ -224,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RoadmapRoute: RoadmapRoute,
   SignupRoute: SignupRoute,
+  SopReviewerRoute: SopReviewerRoute,
   ScholarshipIdRoute: ScholarshipIdRoute,
 }
 export const routeTree = rootRouteImport

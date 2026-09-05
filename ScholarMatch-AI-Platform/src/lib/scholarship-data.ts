@@ -28,6 +28,11 @@ export type Scholarship = {
   contributingFactors: string[];
   recommendations: { title: string; detail: string; priority: "High" | "Medium" | "Low" }[];
   documents: { name: string; type: "PDF" | "DOCX" | "Image"; status: DocStatus }[];
+  verifiedAt?: string;
+  sourceStatus?: "Verified" | "Review due";
+  eligibility?: { label: string; requirement: string; met: boolean; evidence: string }[];
+  negativeFactors?: string[];
+  fitImprovements?: { label: string; impact: string; detail: string }[];
 };
 
 export const student = {

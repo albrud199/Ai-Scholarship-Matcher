@@ -3,9 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/scholar/app-shell";
 import { ScholarshipCard } from "@/components/scholar/scholarship-card";
 import { SectionHeading } from "@/components/scholar/primitives";
-import { buckets, scholarships, student } from "@/lib/scholarship-data";
+import { buckets, notifications, scholarships, student } from "@/lib/scholarship-data";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, Target, Gauge, FileClock, Timer } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Target, Gauge, FileClock, Timer, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { applicationRecord, useApplicationState } from "@/lib/application-state";
@@ -135,18 +135,25 @@ function Dashboard() {
         </Card>
       </div>
 
-      <section className="glass-card mb-8 p-5">
+      <section className="glass-card mb-8 border-flare-200/80 p-5">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold tracking-wide text-leaf-700 uppercase">
-              Your application workspace
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-flare-700 uppercase">
+              <Sparkles className="size-3.5" /> Best next action
             </p>
-            <h2 className="mt-1 text-xl font-bold text-brand-900">What needs your attention</h2>
+            <h2 className="mt-1 text-xl font-bold text-brand-900">Finish your Chevening SOP</h2>
           </div>
-          <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
-            {tracked.length} tracked
-          </span>
+          <Link
+            to="/copilot"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-leaf-800 hover:text-leaf-900"
+          >
+            Ask Copilot <ArrowRight className="size-3.5" />
+          </Link>
         </div>
+        <p className="mb-4 max-w-2xl text-sm text-brand-600">
+          Add the missing leadership evidence to your draft for an estimated +9 readiness points. It
+          takes about 45 minutes and affects 6 open applications.
+        </p>
         {tracked.length ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {tracked.slice(0, 3).map((scholarship) => {
@@ -189,6 +196,35 @@ function Dashboard() {
             here.
           </p>
         )}
+      </section>
+
+      <section className="glass-card mb-8 p-5">
+        <SectionHeading
+          title="Recent scholarship changes"
+          hint="Freshness signals from your saved and matched opportunities"
+        />
+        <div className="grid gap-3 md:grid-cols-3">
+          {notifications
+            .filter(
+              (notification) => notification.group === "Match" || notification.group === "Deadline",
+            )
+            .slice(0, 3)
+            .map((notification) => (
+              <div
+                key={notification.id}
+                className="rounded-xl border border-brand-200 bg-white/30 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-brand-100 px-2 py-1 text-[10px] font-semibold text-brand-700">
+                    {notification.group}
+                  </span>
+                  <span className="text-[10px] text-brand-400">{notification.time}</span>
+                </div>
+                <p className="mt-3 text-sm font-semibold text-brand-900">{notification.title}</p>
+                <p className="mt-1 text-xs leading-5 text-brand-500">{notification.detail}</p>
+              </div>
+            ))}
+        </div>
       </section>
 
       <div className="glass-card mb-8 flex flex-wrap items-center gap-2 p-3">

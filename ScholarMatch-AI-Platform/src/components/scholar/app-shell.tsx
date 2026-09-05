@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -7,15 +7,18 @@ import {
   FolderCheck,
   Wallet,
   UserRound,
+  MessageCircle,
   Bell,
   Search,
   GraduationCap,
   X,
   CircleAlert,
   Sparkles,
+  FilePenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { notifications, scholarships, student } from "@/lib/scholarship-data";
+import { clearSession, roleLabel, useSession } from "@/lib/auth-state";
+import { notifications, scholarships } from "@/lib/scholarship-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +30,14 @@ const nav = [
   { to: "/roadmap", label: "Roadmap", icon: RouteIcon },
   { to: "/documents", label: "Documents", icon: FolderCheck },
   { to: "/funding", label: "Funding", icon: Wallet },
+  { to: "/copilot", label: "Copilot", icon: MessageCircle },
+  { to: "/sop-reviewer", label: "SOP reviewer", icon: FilePenLine },
+  {
+    to: "/admin",
+    label: "Review console",
+    icon: LayoutDashboard,
+    roles: ["admin", "reviewer"] as const,
+  },
   { to: "/profile", label: "Profile", icon: UserRound },
 ] as const;
 
@@ -63,10 +74,21 @@ export function AppShell({
   const [readNotifications, setReadNotifications] = useState<string[]>(getStoredReadNotifications);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const session = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const unread = notifications.filter(
     (notification) => notification.unread && !readNotifications.includes(notification.id),
   ).length;
+
+  useEffect(() => {
+    if (!session) navigate({ to: "/login" });
+  }, [navigate, session]);
+
+  if (!session) return null;
+
+  const visibleNav = nav.filter(
+    (item) => !("roles" in item) || item.roles.includes(session.role as "admin" | "reviewer"),
+  );
 
   const markAllAsRead = () => {
     const nextReadNotifications = notifications
@@ -105,6 +127,10 @@ export function AppShell({
       navigate({ to: "/profile" });
       return;
     }
+    if (q.includes("copilot") || q.includes("chat") || q.includes("advisor")) {
+      navigate({ to: "/copilot" });
+      return;
+    }
 
     const matchedScholarship = scholarships.find(
       (s) =>
@@ -139,7 +165,7 @@ export function AppShell({
           </Link>
 
           <nav className="flex flex-col gap-1">
-            {nav.map((item) => {
+            {visibleNav.map((item) => {
               const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
               return (
                 <Link
@@ -212,12 +238,29 @@ export function AppShell({
                 className="flex items-center gap-2.5 rounded-[10px] px-1.5 py-1 hover:bg-brand-200/60"
               >
                 <span className="grid size-9 place-items-center rounded-full bg-brand-800 text-xs font-bold text-brand-50">
-                  {student.initials}
+                  {session.initials}
                 </span>
-                <span className="hidden text-sm font-semibold text-brand-800 sm:block">
-                  {student.name}
+                <span className="hidden sm:block">
+                  <span className="block text-sm font-semibold text-brand-800">{session.name}</span>
+                  <span className="block text-[10px] text-brand-500">
+                    {roleLabel(session.role)}
+                  </span>
                 </span>
               </Link>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Log out"
+                title="Log out"
+                onClick={() => {
+                  clearSession();
+                  navigate({ to: "/login" });
+                }}
+                className="size-9 rounded-[10px] text-brand-500 hover:bg-brand-200/60 hover:text-brand-900"
+              >
+                <X className="size-4" />
+              </Button>
             </div>
           </header>
 
@@ -232,7 +275,7 @@ export function AppShell({
           </main>
 
           <nav className="sticky bottom-0 z-20 flex justify-between border-t border-white/70 bg-brand-50/60 px-2 py-2 shadow-[0_-8px_30px_rgba(13,14,7,0.06)] backdrop-blur-2xl lg:hidden">
-            {nav.map((item) => {
+            {visibleNav.map((item) => {
               const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
               return (
                 <Link
@@ -316,6 +359,14 @@ export function AppShell({
           </aside>
         </div>
       ) : null}
+      <Link
+        to="/chat"
+        aria-label="Open AI Copilot"
+        title="Open AI Copilot"
+        className="fixed right-4 bottom-16 z-30 grid size-12 place-items-center rounded-full bg-brand-800 text-brand-50 shadow-elevated transition-transform hover:scale-105 hover:bg-brand-950 lg:right-8 lg:bottom-8"
+      >
+        <MessageCircle className="size-5" />
+      </Link>
     </div>
   );
 }

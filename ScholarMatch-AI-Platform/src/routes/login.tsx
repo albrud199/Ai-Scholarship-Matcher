@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { student } from "@/lib/scholarship-data";
+import { authenticate, testAccounts } from "@/lib/auth-state";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -33,9 +33,10 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState(student.email);
-  const [password, setPassword] = useState("demo-password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  const [error, setError] = useState("");
 
   return (
     <main className="aurora relative flex min-h-screen items-center justify-center overflow-hidden p-4 sm:p-8">
@@ -98,7 +99,12 @@ function Login() {
               className="mt-8 flex flex-col gap-5"
               onSubmit={(e) => {
                 e.preventDefault();
-                navigate({ to: "/" });
+                const user = authenticate(email, password);
+                if (!user) {
+                  setError("That email and password do not match a test account.");
+                  return;
+                }
+                navigate({ to: user.role === "admin" ? "/admin" : "/" });
               }}
             >
               <label className="block text-sm font-semibold text-brand-800">
@@ -150,7 +156,38 @@ function Login() {
                 Log in to ScholarMatch
                 <ArrowRight className="size-4" />
               </button>
+              {error ? <p className="text-xs font-semibold text-flare-700">{error}</p> : null}
             </form>
+
+            <div className="mt-6 rounded-xl border border-brand-200 bg-brand-100/60 p-4">
+              <p className="text-[11px] font-bold tracking-wide text-brand-600 uppercase">
+                Frontend test accounts
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                {testAccounts.map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    onClick={() => {
+                      setEmail(account.email);
+                      setPassword(account.password);
+                      setError("");
+                    }}
+                    className="flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-left hover:border-leaf-500"
+                  >
+                    <span>
+                      <span className="block text-xs font-bold text-brand-800">{account.role}</span>
+                      <span className="block text-[11px] text-brand-500">{account.email}</span>
+                    </span>
+                    <span className="text-[10px] font-semibold text-leaf-800">Use account</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[10px] leading-4 text-brand-500">
+                Demo-only credentials. Replace this client-side flow with Supabase Auth before
+                production.
+              </p>
+            </div>
 
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-brand-300" />

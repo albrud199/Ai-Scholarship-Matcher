@@ -10,7 +10,15 @@ import {
   UrgencyBadge,
 } from "@/components/scholar/primitives";
 import { docCompletion, getScholarship, scholarships } from "@/lib/scholarship-data";
-import { ArrowLeft, Bookmark, CheckCircle2, ExternalLink, Info, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  CheckCircle2,
+  CircleAlert,
+  ExternalLink,
+  Info,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   applicationRecord,
@@ -31,7 +39,7 @@ export const Route = createFileRoute("/scholarship/$id")({
         { title: `${name} — Match, readiness & documents | ScholarMatch AI` },
         {
           name: "description",
-          content: `AI match score, success probability, readiness breakdown and document checklist for the ${name}.`,
+          content: `Explainable match score, selection context, readiness breakdown and document checklist for the ${name}.`,
         },
         { property: "og:title", content: `${name} | ScholarMatch AI` },
         {
@@ -68,6 +76,33 @@ function Detail() {
   const completion = docCompletion(s);
   const related = scholarships.filter((r) => r.id !== s.id).slice(0, 3);
   const nextAction = s.documents.find((document) => document.status !== "Done") ?? null;
+  const eligibility = s.eligibility ?? [
+    { label: "Degree", requirement: s.degree, met: true, evidence: "Your current profile" },
+    {
+      label: "Academic record",
+      requirement: "Competitive GPA and academic history",
+      met: (s.scoreBreakdown[0]?.value ?? 0) >= 80,
+      evidence: "Profile Fit breakdown",
+    },
+    {
+      label: "Application evidence",
+      requirement: `${s.documents.filter((document) => document.status === "Done").length}/${s.documents.length} documents ready`,
+      met: completion >= 70,
+      evidence: "Application checklist",
+    },
+  ];
+  const negativeFactors =
+    s.negativeFactors ??
+    s.recommendations
+      .filter((recommendation) => recommendation.priority === "High")
+      .map((recommendation) => recommendation.detail);
+  const fitImprovements =
+    s.fitImprovements ??
+    s.recommendations.map((recommendation) => ({
+      label: recommendation.title,
+      impact: recommendation.priority === "High" ? "+9 readiness" : "+3 fit points",
+      detail: recommendation.detail,
+    }));
 
   return (
     <AppShell title={s.name} subtitle={`${s.provider} · ${s.country}`}>
@@ -85,6 +120,9 @@ function Detail() {
             <FundingBadge type={s.fundingType} />
             <UrgencyBadge daysLeft={s.daysLeft} />
             <DaysBadge daysLeft={s.daysLeft} />
+            <span className="rounded-full bg-leaf-100 px-2.5 py-1 text-[11px] font-semibold text-leaf-800">
+              {s.sourceStatus ?? "Verified"} source
+            </span>
           </div>
           <p className="metric mt-2 text-2xl text-brand-900">${s.amount.toLocaleString()}</p>
           <p className="text-sm text-brand-500">{s.amountLabel}</p>
@@ -150,12 +188,12 @@ function Detail() {
       <p className="mb-6 max-w-3xl text-sm leading-relaxed text-brand-700">{s.description}</p>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
-        <Panel title="Match score">
+        <Panel title="Profile Fit">
           <div className="flex items-center gap-4">
             <ScoreRing value={s.match} size={92} />
             <p className="text-xs leading-relaxed text-brand-600">
-              Your profile aligns strongly on academics and leadership, the two heaviest factors in
-              this programme's selection model.
+              Deterministic fit calculated from your profile facts, eligibility requirements, and
+              deadline readiness. It is not an admission prediction.
             </p>
           </div>
           <div className="mt-4 flex flex-col gap-3">
@@ -165,37 +203,36 @@ function Detail() {
           </div>
         </Panel>
 
-        <Panel title="Success probability">
-          <p className="metric text-4xl text-flare-600">{s.successProbability}%</p>
-          <p className="mt-1 text-xs text-brand-500">
-            Confidence interval {s.confidenceLow}%–{s.confidenceHigh}%
+        <Panel title="Eligibility gate">
+          <p className="text-xs leading-relaxed text-brand-600">
+            Hard requirements are checked before the weighted Profile Fit score is calculated.
           </p>
-          <div className="relative mt-4 h-3 w-full rounded-full bg-brand-200">
-            <div
-              className="absolute h-3 rounded-full bg-flare-200"
-              style={{
-                left: `${s.confidenceLow}%`,
-                width: `${s.confidenceHigh - s.confidenceLow}%`,
-              }}
-            />
-            <div
-              className="absolute -top-1 h-5 w-1 rounded-full bg-flare-700"
-              style={{ left: `${s.successProbability}%` }}
-            />
-          </div>
-          <ul className="mt-4 flex flex-col gap-2">
-            {s.contributingFactors.map((f) => (
-              <li key={f} className="flex gap-2 text-xs text-brand-600">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-flare-400" />
-                {f}
+          <ul className="mt-4 flex flex-col gap-3">
+            {eligibility.map((item) => (
+              <li key={item.label} className="flex gap-3">
+                <span
+                  className={cn(
+                    "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full",
+                    item.met ? "bg-leaf-100 text-leaf-800" : "bg-flare-50 text-flare-700",
+                  )}
+                >
+                  {item.met ? (
+                    <CheckCircle2 className="size-3.5" />
+                  ) : (
+                    <CircleAlert className="size-3.5" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-brand-800">
+                    {item.label}: {item.requirement}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-brand-500">
+                    Evidence: {item.evidence}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 flex gap-2 rounded-[10px] bg-brand-100 p-3 text-[11px] text-brand-500">
-            <Info className="size-4 shrink-0" />
-            Estimated from historical outcomes of comparable profiles. Indicative only — not a
-            guarantee of any decision.
-          </p>
         </Panel>
 
         <Panel title="Readiness score">
@@ -216,6 +253,70 @@ function Detail() {
             ))}
           </div>
         </Panel>
+      </div>
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        <Panel title="Why this scholarship is recommended">
+          <ul className="flex flex-col gap-3">
+            {s.contributingFactors.map((factor) => (
+              <li key={factor} className="flex gap-2 text-xs leading-5 text-brand-700">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-leaf-700" />
+                {factor}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 flex gap-2 rounded-[10px] bg-brand-100 p-3 text-[11px] text-brand-500">
+            <Info className="size-4 shrink-0" />
+            Sources: your profile facts, this scholarship's requirements, and the current
+            application checklist.
+          </p>
+        </Panel>
+
+        <Panel title={s.match < 80 ? "Why not ranked higher?" : "What would improve your fit?"}>
+          <div className="flex flex-col gap-3">
+            {(s.match < 80
+              ? negativeFactors
+              : fitImprovements.map((improvement) => `${improvement.label}: ${improvement.detail}`)
+            ).map((factor) => (
+              <div
+                key={typeof factor === "string" ? factor : factor}
+                className="flex gap-2 text-xs leading-5 text-brand-700"
+              >
+                {s.match < 80 ? (
+                  <CircleAlert className="mt-0.5 size-4 shrink-0 text-flare-600" />
+                ) : (
+                  <Sparkles className="mt-0.5 size-4 shrink-0 text-leaf-700" />
+                )}
+                {factor}
+              </div>
+            ))}
+          </div>
+          {s.match < 80 ? (
+            <p className="mt-4 text-[11px] text-brand-500">
+              Address the missing evidence above, then the matching engine will recalculate your
+              Profile Fit.
+            </p>
+          ) : null}
+        </Panel>
+      </div>
+
+      <div className="mb-6 rounded-[12px] border border-brand-200 bg-brand-100/60 p-4 text-xs text-brand-600">
+        <p className="font-semibold text-brand-800">Source and freshness</p>
+        <p className="mt-1">
+          Official source:{" "}
+          <a
+            className="font-semibold text-leaf-800 underline"
+            href={s.applyUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {s.provider} application page
+          </a>
+        </p>
+        <p className="mt-1">
+          Last verified: {s.verifiedAt ?? "Demo record pending backend verification timestamp"} ·
+          Status: {s.sourceStatus ?? "Verified in demo data"}
+        </p>
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">

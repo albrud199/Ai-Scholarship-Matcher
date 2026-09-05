@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/scholar/app-shell";
 import { ProgressBar } from "@/components/scholar/primitives";
 import { student } from "@/lib/scholarship-data";
+import { clearSession } from "@/lib/auth-state";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,6 +160,7 @@ function Profile() {
             </Button>
             <Link
               to="/login"
+              onClick={clearSession}
               className="inline-flex h-10 items-center rounded-[10px] px-5 text-sm font-semibold text-flare-700 hover:bg-flare-50"
             >
               Log out

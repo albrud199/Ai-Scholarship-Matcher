@@ -36,8 +36,8 @@ function Field({
   value: string;
   onChange: (v: string) => void;
   type?: string;
-  error?: string;
-  placeholder?: string;
+  error?: string | undefined;
+  placeholder?: string | undefined;
 }) {
   const valid = value.trim().length > 0 && !error;
   return (

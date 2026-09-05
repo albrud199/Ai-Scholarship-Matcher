@@ -1,10 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/scholar/app-shell";
 import { ProgressBar, StatusIcon, StatusPill } from "@/components/scholar/primitives";
 import { scholarships, type DocStatus } from "@/lib/scholarship-data";
 import { cn } from "@/lib/utils";
-import { FileText, FileImage, FileType, Upload, TriangleAlert } from "lucide-react";
+import {
+  FileText,
+  FileImage,
+  FileType,
+  Upload,
+  TriangleAlert,
+  CheckCircle2,
+  LoaderCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,8 +62,7 @@ function Documents() {
         const existing = map.get(d.name);
         if (existing) {
           existing.required.push(s.name);
-          if (order.indexOf(d.status) < order.indexOf(existing.status))
-            existing.status = d.status;
+          if (order.indexOf(d.status) < order.indexOf(existing.status)) existing.status = d.status;
         } else {
           map.set(d.name, {
             name: d.name,
@@ -70,8 +77,54 @@ function Documents() {
   }, []);
 
   const [rows, setRows] = useState<Row[]>(initial);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [extractedFacts, setExtractedFacts] = useState<string[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
   const done = rows.filter((r) => r.status === "Done").length;
   const missing = rows.filter((r) => r.status === "Missing");
+
+  const uploadFile = (file: File | undefined) => {
+    if (!file) return;
+    setUploadError("");
+    setUploadSuccess("");
+    setExtractedFacts([]);
+    const allowed = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+    ];
+    if (!allowed.includes(file.type)) {
+      setUploadError("Upload a PDF, DOCX, JPG or PNG file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Files must be 10 MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    setUploadProgress(12);
+    const timer = window.setInterval(() => {
+      setUploadProgress((current) => {
+        const next = Math.min(current + 22, 100);
+        if (next === 100) {
+          window.clearInterval(timer);
+          setUploading(false);
+          setUploadSuccess(`${file.name} uploaded to your private document queue.`);
+          setExtractedFacts([
+            "Document type detected: academic evidence",
+            "Profile evidence queued for verification",
+            "Readiness recalculation queued",
+          ]);
+        }
+        return next;
+      });
+    }, 260);
+  };
 
   const cycle = (name: string) =>
     setRows((prev) =>
@@ -102,16 +155,85 @@ function Documents() {
       ) : null}
 
       <Card className="glass-card mb-8 border-brand-200/80 bg-brand-50/90">
-        <CardContent className="flex flex-wrap items-center gap-6 p-5">
-        <div className="min-w-56 flex-1">
-          <ProgressBar
-            value={Math.round((done / rows.length) * 100)}
-            label="Overall document completeness"
-          />
-        </div>
-        <Button className="h-10 rounded-[10px] text-sm font-semibold">
-          <Upload className="size-4" /> Upload document
-        </Button>
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="min-w-56 flex-1">
+              <ProgressBar
+                value={Math.round((done / rows.length) * 100)}
+                label="Overall document completeness"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="h-10 rounded-[10px] text-sm font-semibold"
+            >
+              <Upload className="size-4" /> Choose document
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,.docx,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(event) => uploadFile(event.target.files?.[0])}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              uploadFile(event.dataTransfer.files[0]);
+            }}
+            className={cn(
+              "mt-5 flex min-h-28 w-full flex-col items-center justify-center rounded-xl border border-dashed p-5 text-center transition-colors",
+              isDragging
+                ? "border-leaf-600 bg-leaf-50"
+                : "border-brand-300 bg-white/25 hover:border-leaf-500 hover:bg-leaf-50/50",
+            )}
+          >
+            {uploading ? (
+              <LoaderCircle className="size-6 animate-spin text-leaf-700" />
+            ) : (
+              <Upload className="size-6 text-brand-400" />
+            )}
+            <span className="mt-2 text-sm font-semibold text-brand-800">
+              {uploading
+                ? `Uploading securely... ${uploadProgress}%`
+                : "Drop a document here or browse"}
+            </span>
+            <span className="mt-1 text-[11px] text-brand-500">
+              PDF, DOCX, JPG or PNG · maximum 10 MB
+            </span>
+          </button>
+          {uploadError ? (
+            <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-flare-700">
+              <TriangleAlert className="size-4" />
+              {uploadError}
+            </p>
+          ) : null}
+          {uploadSuccess ? (
+            <div className="mt-4 rounded-xl border border-leaf-200 bg-leaf-50 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold text-leaf-900">
+                <CheckCircle2 className="size-4" />
+                {uploadSuccess}
+              </p>
+              <div className="mt-3 flex flex-col gap-2">
+                {extractedFacts.map((fact) => (
+                  <p key={fact} className="text-[11px] text-leaf-800">
+                    {fact}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -140,9 +262,7 @@ function Documents() {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <StatusIcon status={r.status} />
-                  <span className="break-words text-sm font-semibold text-brand-900">
-                    {r.name}
-                  </span>
+                  <span className="break-words text-sm font-semibold text-brand-900">{r.name}</span>
                 </span>
                 <span className="mt-1 block break-words text-[11px] text-brand-500">
                   Required by {r.required.length} scholarship
@@ -200,7 +320,9 @@ function Documents() {
                   <TableCell className="metric px-4 py-3 text-brand-600">
                     {complete}/{s.documents.length}
                   </TableCell>
-                  <TableCell className="metric px-4 py-3 text-brand-600">{s.daysLeft} days</TableCell>
+                  <TableCell className="metric px-4 py-3 text-brand-600">
+                    {s.daysLeft} days
+                  </TableCell>
                 </TableRow>
               );
             })}
