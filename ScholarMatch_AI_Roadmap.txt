@@ -1,0 +1,49 @@
+﻿ScholarMatch AI - Advanced Engineering Roadmap
+100% Free, Open-Source, and ML-Driven
+A prioritized feature roadmap to transform ScholarMatch AI into a production-grade, AI-powered scholarship platform that demonstrates advanced full-stack and machine learning engineering. 
+🔴 Tier 1 - Foundation & Data Engineering (Build the Engine)
+1. Real Backend + Database
+* Database & Auth: Supabase (free tier: 500MB Postgres, Auth, Row Level Security).
+* ORM: Drizzle ORM (type-safe, lightweight).
+* Architecture Split: Maintain the React/Node frontend for UI, but introduce a FastAPI microservice (hosted on Koyeb or Render free tiers) for heavy machine learning and AI inference.
+2. Scholarship Database + Automated Data Pipelines
+* Web Scrapers: Build automated scrapers using GitHub Actions cron jobs (running daily for free) targeting high-value hubs: DAAD portals for Germany, Study in Sweden datasets, US university funding pages, and Norwegian state scholarships.
+* Data Cleaning: When pulling tabular data from aggregator sites, clean it systematically using Pandas before insertion. Ensure consistent formatting by standardizing headers with mappings (e.g., df.rename(columns={'Year of Study': 'Year_of_Study'})).
+* Search: Implement full-text search using Postgres tsvector.
+🟡 Tier 2 - Advanced AI Superpowers (The Differentiators)
+3. AI Copilot Chatbot with RAG Architecture ⭐ UNIQUE
+* How it works: Instead of relying on static LLM knowledge (which hallucinates deadlines), implement a Retrieval-Augmented Generation (RAG) pipeline.
+* Infrastructure: Feed official scholarship PDFs and eligibility criteria into a free vector database (Pinecone or Qdrant).
+* Embeddings: Use open-source models from Hugging Face via SentenceTransformers (avoids API costs).
+* Engine: Google Gemini 1.5 Flash (free tier: 15 RPM) retrieves context from the vector DB to provide perfectly accurate, cited answers about eligibility and deadlines.
+4. Explainable AI (XAI) Success Predictor ⭐ UNIQUE
+* How it works: Move beyond arbitrary match percentages. Train a lightweight classification model (like a Random Forest) on historical scholarship requirements.
+* SHAP Integration: Use SHAP (SHapley Additive exPlanations) to output exactly why a user matched.
+* User View: "Your match score is 84%. Your GPA contributes +18%, but your lack of work experience reduces it by -12%."
+5. AI SOP / Essay Writer & Reviewer
+* Writer Mode: User answers structured questions; AI generates a draft tailored to specific scholarship criteria (e.g., leadership for Chevening, research impact for MEXT).
+* Reviewer Mode: Provides Flesch-Kincaid readability scores, grammar checks, and a side-by-side diff view of original vs. suggested improvements.
+6. AI Scholarship Interview Simulator
+* How it works: Uses the browser's native Web Speech API combined with Gemini 1.5 Flash to conduct real-time verbal interviews based on the specific scholarship the user is applying for.
+* Feedback: Evaluates relevance, specificity, impact storytelling, and confidence.
+🟢 Tier 3 - Intelligence & Collaboration
+7. Country Intelligence Hub
+* Data: Integrate free APIs (like Numbeo) to show real-time cost of living, rent, and transport data for target study destinations.
+* Community: Map out diaspora communities (e.g., Bangladeshi student associations) and visa success rates.
+8. Professional Team Workflows
+* Version Control: If collaborating on this project, demonstrate professional SWE practices. Establish clean Git workflows early-for example, smoothly merging feature branches like shafin/initial-ui into the main repository using standard pull request reviews.
+💎 Tier 4 - Technical Excellence & Security
+9. Progressive Web App (PWA) + Offline Mode
+* Why: Essential for users in regions with unreliable internet.
+* Implementation: Service workers to cache scholarship data, allowing browsing and note-taking without an active connection.
+10. Security Hardening
+* Policies: Supabase Row Level Security (RLS) ensuring users only access their own data.
+* Validation: Input sanitization and API rate limiting on the FastAPI AI endpoints to prevent abuse.
+
+Summary of Free Tech Stack
+* Frontend: React / Vite / Tailwind
+* Backend/Database: Supabase (Postgres)
+* ML Microservice: FastAPI hosted on Koyeb/Render
+* AI Models: Gemini 1.5 Flash + Hugging Face SentenceTransformers
+* Vector DB: Pinecone / Qdrant
+* CI/CD & Scraping: GitHub Actions
