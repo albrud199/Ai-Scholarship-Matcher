@@ -1049,14 +1049,14 @@ video {
 .max-w-\[calc\(100vw-3rem\)\] {
   max-width: calc(100vw - 3rem);
 }
+.max-w-full {
+  max-width: 100%;
+}
 .max-w-lg {
   max-width: 32rem;
 }
 .max-w-md {
   max-width: 28rem;
-}
-.max-w-full {
-  max-width: 100%;
 }
 .flex-1 {
   flex: 1 1 0%;
