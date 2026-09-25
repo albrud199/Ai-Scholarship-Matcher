@@ -138,7 +138,7 @@ A modular monolith, not a distributed system. Every draft that proposed splittin
 
 internal module boundaries can be extracted into services later only if real load ever requires it. 
 
-Student Web App / Admin Console | v TanStack Start server functions / API layer | v +-------------------+-------------------+-------------------+ |   PostgreSQL       |   AI Gateway       |  Background Jobs  | |   (Supabase)        |                    |                    | |  profiles           |  prompt registry   |  ingestion         | |  scholarships       |  Gemini adapter     |  scraping          | |  applications        |  local-model fallback | alerts          | 
+Student Web App / Admin Console | v Next.js server functions / API layer | v +-------------------+-------------------+-------------------+ |   PostgreSQL       |   AI Gateway       |  Background Jobs  | |   (Supabase)        |                    |                    | |  profiles           |  prompt registry   |  ingestion         | |  scholarships       |  Gemini adapter     |  scraping          | |  applications        |  local-model fallback | alerts          | 
 
 ScholarMatch AI — Consolidated Master Roadmap   •   Page 6 of 23 
 
@@ -592,7 +592,7 @@ _Version 3.0 — Consolidated Edition_
 
 #### **12.1 Resume Framing** 
 
-Built an AI-powered scholarship application intelligence platform using TypeScript, TanStack Start, PostgreSQL/Supabase, deterministic eligibility and ranking, retrieval-augmented generation, automated scholarship ingestion, document intelligence, and AI evaluation/observability tooling. 
+Built an AI-powered scholarship application intelligence platform using TypeScript, Next.js, PostgreSQL/Supabase, deterministic eligibility and ranking, retrieval-augmented generation, automated scholarship ingestion, document intelligence, and AI evaluation/observability tooling. 
 
 #### **12.2 Strong Interview Talking Points** 
 
