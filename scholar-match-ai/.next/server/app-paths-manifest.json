@@ -1,12 +1,15 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/settings/page": "app/settings/page.js",
+  "/auth/signup/page": "app/auth/signup/page.js",
   "/chat/page": "app/chat/page.js",
-  "/dashboard/matches/page": "app/dashboard/matches/page.js",
-  "/dashboard/profile/page": "app/dashboard/profile/page.js",
-  "/dashboard/documents/page": "app/dashboard/documents/page.js",
+  "/page": "app/page.js",
+  "/scholarships/page": "app/scholarships/page.js",
+  "/settings/page": "app/settings/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/documents/page": "app/dashboard/documents/page.js",
+  "/dashboard/readiness/page": "app/dashboard/readiness/page.js",
   "/dashboard/scholarships/page": "app/dashboard/scholarships/page.js",
-  "/dashboard/readiness/page": "app/dashboard/readiness/page.js"
+  "/dashboard/matches/page": "app/dashboard/matches/page.js",
+  "/dashboard/profile/page": "app/dashboard/profile/page.js"
 }
