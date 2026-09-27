@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DocumentUpload, type UploadedDocument } from '@/components/document-upload';
-import { seedApplications, seedScholarships } from '@/lib/mock-data';
+import { studentApplications, seedScholarships } from '@/lib/mock-data';
 import { formatFileSize } from '@/lib/utils';
 import { FileText, CheckCircle2, AlertTriangle, HardDrive } from 'lucide-react';
 
@@ -20,7 +20,7 @@ export default function DocumentsPage() {
   // Seeded documents from the demo applications, normalized to the upload component's shape.
   const initialDocs: UploadedDocument[] = useMemo(
     () =>
-      seedApplications.flatMap((app) =>
+      studentApplications.flatMap((app) =>
         app.documents.map((d) => ({
           id: d.id,
           file_name: d.file_name,
@@ -155,7 +155,7 @@ export default function DocumentsPage() {
         </TabsContent>
 
         <TabsContent value="usage" className="mt-4 space-y-3">
-          {seedApplications.map((app) => {
+          {studentApplications.map((app) => {
             const sch = seedScholarships.find((s) => s.id === app.scholarship_id);
             return (
               <Card key={app.id}>

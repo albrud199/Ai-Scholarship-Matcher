@@ -12,7 +12,7 @@ import {
   makeChatMessage,
   COPILOT_SUGGESTIONS,
 } from '@/lib/chat-service';
-import { seedScholarships, seedProfile, seedApplications } from '@/lib/mock-data';
+import { seedScholarships, studentProfile, studentApplications } from '@/lib/mock-data';
 import type { ChatMessage, Citation } from '@/types';
 import { MessageSquare, X, Send, Sparkles, Quote, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -111,7 +111,7 @@ export function ChatPanel({ className, compact = false }: { className?: string; 
 
     // Retrieval + grounded generation (deterministic, local RAG pipeline).
     setTimeout(() => {
-      const answer = generateGroundedAnswer(question, seedScholarships, seedProfile, seedApplications);
+      const answer = generateGroundedAnswer(question, seedScholarships, studentProfile, studentApplications);
       const assistantMsg = makeChatMessage('assistant', answer.content, answer.citations);
       const withAnswer = [...next, assistantMsg];
       setMessages(withAnswer);

@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MatchExplainer } from '@/components/match-explainer';
-import { seedScholarships, seedProfile } from '@/lib/mock-data';
+import { seedScholarships, studentProfile } from '@/lib/mock-data';
 import { rankScholarships } from '@/lib/matching';
 import { getScoreColor, getDaysUntil, cn } from '@/lib/utils';
 import { ChevronRight, CheckCircle2, XCircle, Target, Info } from 'lucide-react';
 
 export default function MatchesPage() {
-  const matches = useMemo(() => rankScholarships(seedProfile, seedScholarships), []);
+  const matches = useMemo(() => rankScholarships(studentProfile, seedScholarships), []);
   const [selectedId, setSelectedId] = useState<string>(matches[0]?.score.scholarship_id ?? '');
   const [showWhyNot, setShowWhyNot] = useState(false);
 
@@ -98,7 +98,7 @@ export default function MatchesPage() {
                 </CardContent>
               </Card>
             ) : (
-              <MatchExplainer result={selected} scholarship={selectedScholarship} profile={seedProfile} />
+              <MatchExplainer result={selected} scholarship={selectedScholarship} profile={studentProfile} />
             )
           ) : (
             <Card>

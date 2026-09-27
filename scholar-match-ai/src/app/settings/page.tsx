@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { seedProfile } from '@/lib/mock-data';
+import { studentProfile } from '@/lib/mock-data';
 import { Bell, Globe, Trash2, ShieldCheck, Info } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard-shell';
 
@@ -96,7 +96,7 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Account</p>
-              <p className="text-xs text-muted-foreground">{seedProfile.full_name} · profile created {new Date(seedProfile.created_at).toLocaleDateString()}</p>
+              <p className="text-xs text-muted-foreground">{studentProfile.full_name} · profile created {new Date(studentProfile.created_at).toLocaleDateString()}</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowDelete(!showDelete)}>
               <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete account

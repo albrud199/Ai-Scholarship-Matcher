@@ -461,7 +461,16 @@ export const seedProfile: Profile = {
   updated_at: now,
 };
 
-export const seedDocuments: ApplicationDocument[] = [
+
+/** A newly registered student starts with no personal data. */
+export const studentProfile: Profile = {
+  id: 'new-profile', user_id: '', full_name: '', nationality: '', current_degree: '',
+  current_institution: '', target_degree_level: 'master', target_field_of_study: '',
+  other_language_scores: {}, research_experience: [], work_experience: [],
+  leadership_experience: [], publications: [], awards: [], goals: '',
+  constraints: { preferred_countries: [], exclude_countries: [], language_requirements: [], funding_type: 'any' },
+  created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+};export const seedDocuments: ApplicationDocument[] = [
   {
     id: 'doc-1',
     application_id: 'app-1',
@@ -602,3 +611,5 @@ export const DEGREE_LEVELS = [
   { value: 'phd', label: 'PhD' },
   { value: 'postdoc', label: 'Postdoc' },
 ];
+/** New students have no applications until they add one manually. */
+export const studentApplications: Application[] = [];

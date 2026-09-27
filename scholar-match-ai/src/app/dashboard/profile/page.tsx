@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { seedProfile, COUNTRIES, FIELDS_OF_STUDY } from '@/lib/mock-data';
+import { studentProfile, COUNTRIES, FIELDS_OF_STUDY } from '@/lib/mock-data';
 import type { Profile, ResearchExperience, WorkExperience, LeadershipExperience, Publication, Award } from '@/types';
 import {
   User,
@@ -87,7 +87,7 @@ export default function ProfilePage() {
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [form, setForm] = useState<ProfileFormState>(() => fromProfile(seedProfile));
+  const [form, setForm] = useState<ProfileFormState>(() => fromProfile(studentProfile));
 
   const set = <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { seedApplications, seedScholarships, seedProfile } from '@/lib/mock-data';
+import { studentApplications, seedScholarships, studentProfile } from '@/lib/mock-data';
 import { computeReadiness, generateBestNextActions, getDeadlineRisk } from '@/lib/readiness';
 import { getDaysUntil, getScoreColor, cn } from '@/lib/utils';
 import type { BestNextAction } from '@/types';
@@ -52,12 +52,12 @@ export default function ReadinessPage() {
   );
 
   const readinessByApp = useMemo(
-    () => seedApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], seedProfile) })),
+    () => studentApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], studentProfile) })),
     [scholarshipById]
   );
 
   const actions = useMemo(
-    () => generateBestNextActions(seedApplications, scholarshipById, seedProfile),
+    () => generateBestNextActions(studentApplications, scholarshipById, studentProfile),
     [scholarshipById]
   );
 
@@ -136,7 +136,7 @@ export default function ReadinessPage() {
                 </p>
                 <p className="text-lg font-bold mt-0.5">
                   {(() => {
-                    const sch = scholarshipById[seedApplications.find((a) => a.id === best.application_id)?.scholarship_id ?? ''];
+                    const sch = scholarshipById[studentApplications.find((a) => a.id === best.application_id)?.scholarship_id ?? ''];
                     return sch ? `${getDaysUntil(sch.deadline)}d` : '—';
                   })()}
                 </p>

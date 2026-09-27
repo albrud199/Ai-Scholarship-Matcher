@@ -53,6 +53,8 @@ export default function SignupPage() {
         options: { data: { full_name: formData.fullName } },
       });
       if (error) throw error;
+      // A new account must not inherit demo chat data from this browser.
+      window.localStorage.removeItem('scholarmatch:chat-history');
       router.push(data.session ? '/dashboard?welcome=true' : '/auth/login?check-email=true');
     } catch (error) {
       setGeneralError(error instanceof Error ? error.message : 'Failed to create account. Please try again.');
@@ -70,6 +72,8 @@ export default function SignupPage() {
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) throw error;
+      // A new account must not inherit demo chat data from this browser.
+      window.localStorage.removeItem('scholarmatch:chat-history');
     } catch (error) {
       setGeneralError(error instanceof Error ? error.message : `Failed to sign in with ${provider}. Please try again.`);
     } finally {

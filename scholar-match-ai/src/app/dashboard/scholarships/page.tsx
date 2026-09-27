@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScholarshipCard } from '@/components/scholarship-card';
-import { seedScholarships, seedProfile, COUNTRIES, FIELDS_OF_STUDY, DEGREE_LEVELS } from '@/lib/mock-data';
+import { seedScholarships, studentProfile, COUNTRIES, FIELDS_OF_STUDY, DEGREE_LEVELS } from '@/lib/mock-data';
 import { computeMatch } from '@/lib/matching';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 
@@ -52,7 +52,7 @@ export default function ScholarshipsPage() {
         }
         return true;
       })
-      .map((s) => ({ scholarship: s, match: computeMatch(seedProfile, s).score }))
+      .map((s) => ({ scholarship: s, match: computeMatch(studentProfile, s).score }))
       .sort((a, b) => b.match.score - a.match.score);
   }, [filters]);
 

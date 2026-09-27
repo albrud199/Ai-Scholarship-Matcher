@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScholarshipCard } from '@/components/scholarship-card';
-import { seedScholarships, seedProfile, seedApplications } from '@/lib/mock-data';
+import { seedScholarships, studentProfile, studentApplications } from '@/lib/mock-data';
 import { rankScholarships } from '@/lib/matching';
 import { computeReadiness, generateBestNextActions } from '@/lib/readiness';
 import { getDaysUntil, getScoreColor, getScoreLabel, getDeadlineStatus, cn } from '@/lib/utils';
@@ -26,19 +26,20 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const matches = useMemo(() => rankScholarships(seedProfile, seedScholarships), []);
+  const matches = useMemo(() => rankScholarships(studentProfile, seedScholarships), []);
   const eligible = matches.filter((m) => m.score.eligibility_passed);
   const avgMatch = Math.round(eligible.reduce((a, m) => a + m.score.score, 0) / Math.max(1, eligible.length));
   const topMatches = matches.slice(0, 3);
+  const hasProfile = Boolean(studentProfile.full_name.trim() && studentProfile.target_field_of_study.trim());
 
   const scholarshipById = useMemo(() => Object.fromEntries(seedScholarships.map((s) => [s.id, s])), []);
   const readinessByApp = useMemo(
-    () => seedApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], seedProfile) })),
+    () => studentApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], studentProfile) })),
     [scholarshipById]
   );
   const avgReadiness = Math.round(readinessByApp.reduce((a, r) => a + r.readiness.overall_score, 0) / Math.max(1, readinessByApp.length));
 
-  const actions = useMemo(() => generateBestNextActions(seedApplications, scholarshipById, seedProfile), [scholarshipById]);
+  const actions = useMemo(() => generateBestNextActions(studentApplications, scholarshipById, studentProfile), [scholarshipById]);
   const bestAction = actions[0];
 
   const upcoming = useMemo(
@@ -55,7 +56,7 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back, {seedProfile.full_name.split(' ')[0]}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{studentProfile.full_name ? `Welcome back, ${studentProfile.full_name.split(' ')[0]}` : 'Start your scholarship journey'}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Here&apos;s where your scholarship journey stands today.
           </p>
@@ -67,6 +68,18 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {!hasProfile && (
+        <Card className="border-primary/30 bg-primary-50/40">
+          <CardContent className="p-5 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0"><User className="h-5 w-5" /></div>
+            <div className="flex-1">
+              <p className="font-semibold">Tell us about yourself</p>
+              <p className="text-sm text-muted-foreground mt-1">Add your education, grades, language scores, goals, and preferences. Your information stays private and helps us find relevant scholarships.</p>
+              <Button size="sm" className="mt-3" asChild><Link href="/dashboard/profile">Complete your profile <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {/* Stats */}
       <div className="grid min-w-0 grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="min-w-0">
@@ -102,9 +115,9 @@ export default function DashboardPage() {
             <div className="flex min-w-0 items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Applications</p>
-                <p className="text-2xl font-bold mt-1">{seedApplications.length}</p>
+                <p className="text-2xl font-bold mt-1">{studentApplications.length}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {seedApplications.filter((a) => a.status === 'in_progress').length} in progress
+                  {studentApplications.filter((a) => a.status === 'in_progress').length} in progress
                 </p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-warning-50 text-warning-600 flex items-center justify-center">
