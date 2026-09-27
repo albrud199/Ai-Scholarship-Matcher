@@ -1,4 +1,9 @@
+#pqoR9d567cVWXlRS
+
 node_modules/
 .next/
 .env
 .env.local
+
+.vercel
+.env*
