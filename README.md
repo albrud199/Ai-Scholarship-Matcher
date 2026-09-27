@@ -4,7 +4,7 @@
 
 1. Create a Supabase project and open **SQL Editor**.
 2. Run [`supabase/schema.sql`](scholar-match-ai/supabase/schema.sql). It creates the profile table, Auth profile trigger, RLS policies, and private document bucket.
-3. Copy `scholar-match-ai/.env.example` to `scholar-match-ai/.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from **Project Settings > API**.
+3. Copy `scholar-match-ai/.env.example` to `scholar-match-ai/.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from **Project Settings > API Keys**.
 4. In Supabase **Authentication > URL Configuration**, add the Vercel URL to **Site URL** and add `https://YOUR-VERCEL-DOMAIN/auth/callback` to **Redirect URLs**.
 5. Enable Google or GitHub under **Authentication > Providers** if those OAuth buttons are needed, then configure each provider's callback URL from Supabase.
 
