@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CopilotFloatingChat } from '@/components/copilot-chat';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
   Search,
@@ -37,7 +38,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const user = { name: 'Alex Johnson', email: 'alex.johnson@university.edu', avatar: null };
+  const [user, setUser] = useState({ name: 'ScholarMatch user', email: '', avatar: null as string | null });
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser({
+          name: data.user.user_metadata.full_name || data.user.email?.split('@')[0] || 'ScholarMatch user',
+          email: data.user.email || '',
+          avatar: data.user.user_metadata.avatar_url || null,
+        });
+      }
+    });
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase?.auth.signOut();
+    window.location.href = '/auth/login';
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,7 +147,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <Link href="/settings" className="flex items-center gap-2"><Settings className="h-4 w-4" />Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => {}}>
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

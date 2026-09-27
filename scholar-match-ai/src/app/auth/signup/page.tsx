@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { GraduationCap, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -45,15 +46,16 @@ export default function SignupPage() {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In real app, this would call Supabase Auth
-      // const { error } = await supabase.auth.signUp({ email: formData.email, password: formData.password, options: { data: { full_name: formData.fullName } } });
-      
-      router.push('/dashboard?welcome=true');
+      if (!supabase) throw new Error('Supabase is not configured');
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: { data: { full_name: formData.fullName } },
+      });
+      if (error) throw error;
+      router.push(data.session ? '/dashboard?welcome=true' : '/auth/login?check-email=true');
     } catch (error) {
-      setGeneralError('Failed to create account. Please try again.');
+      setGeneralError(error instanceof Error ? error.message : 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -62,11 +64,14 @@ export default function SignupPage() {
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
     setIsLoading(true);
     try {
-      // In real app: await supabase.auth.signInWithOAuth({ provider });
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/dashboard');
+      if (!supabase) throw new Error('Supabase is not configured');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
     } catch (error) {
-      setGeneralError(`Failed to sign in with ${provider}. Please try again.`);
+      setGeneralError(error instanceof Error ? error.message : `Failed to sign in with ${provider}. Please try again.`);
     } finally {
       setIsLoading(false);
     }

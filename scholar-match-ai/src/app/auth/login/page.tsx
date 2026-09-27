@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { GraduationCap, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,15 +40,12 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In real app, this would call Supabase Auth
-      // const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-      
+      if (!supabase) throw new Error('Supabase is not configured');
+      const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
+      if (error) throw error;
       router.push('/dashboard');
     } catch (error) {
-      setGeneralError('Invalid email or password. Please try again.');
+      setGeneralError(error instanceof Error ? error.message : 'Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -56,11 +54,14 @@ export default function LoginPage() {
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
     setIsLoading(true);
     try {
-      // In real app: await supabase.auth.signInWithOAuth({ provider });
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/dashboard');
+      if (!supabase) throw new Error('Supabase is not configured');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
     } catch (error) {
-      setGeneralError(`Failed to sign in with ${provider}. Please try again.`);
+      setGeneralError(error instanceof Error ? error.message : `Failed to sign in with ${provider}. Please try again.`);
     } finally {
       setIsLoading(false);
     }

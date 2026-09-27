@@ -24,6 +24,7 @@ import {
   Save,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const STEPS = [
   { id: 'personal', label: 'Personal', icon: User, description: 'Identity and current studies' },
@@ -85,6 +86,7 @@ function fromProfile(p: Profile): ProfileFormState {
 export default function ProfilePage() {
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [form, setForm] = useState<ProfileFormState>(() => fromProfile(seedProfile));
 
   const set = <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
@@ -108,8 +110,52 @@ export default function ProfilePage() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [form]);
 
-  const handleSave = () => {
-    // In the real app: upsert to Supabase `profiles`, then recompute cached match scores.
+  const handleSave = async () => {
+    setSaveError('');
+    if (!supabase) {
+      setSaveError('Supabase is not configured. Add the public Supabase variables to your environment.');
+      return;
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      setSaveError('Please sign in again before saving your profile.');
+      return;
+    }
+
+    const { error } = await supabase.from('profiles').upsert({
+      user_id: authData.user.id,
+      full_name: form.fullName,
+      nationality: form.nationality,
+      current_degree: form.currentDegree,
+      current_institution: form.currentInstitution,
+      target_degree_level: form.targetDegreeLevel,
+      target_field_of_study: form.targetFieldOfStudy,
+      gpa: form.gpa ? Number(form.gpa) : null,
+      gpa_scale: form.gpaScale,
+      ielts_score: form.ielts ? Number(form.ielts) : null,
+      toefl_score: form.toefl ? Number(form.toefl) : null,
+      research_experience: form.research,
+      work_experience: form.work,
+      leadership_experience: form.leadership,
+      publications: form.publications,
+      awards: form.awards,
+      goals: form.goals,
+      constraints: {
+        preferred_countries: form.preferredCountries,
+        exclude_countries: form.excludeCountries,
+        max_tuition_budget: form.maxTuitionBudget ? Number(form.maxTuitionBudget) : undefined,
+        language_requirements: [],
+        funding_type: form.fundingType,
+      },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -297,6 +343,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* Nav */}
+      {saveError && <p className="text-sm text-destructive" role="alert">{saveError}</p>}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
           <ChevronLeft className="mr-1 h-4 w-4" /> Back
