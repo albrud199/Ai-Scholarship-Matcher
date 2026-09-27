@@ -27,6 +27,10 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users can view their own profile" on public.profiles;
+drop policy if exists "Users can create their own profile" on public.profiles;
+drop policy if exists "Users can update their own profile" on public.profiles;
+
 create policy "Users can view their own profile"
   on public.profiles for select using (auth.uid() = user_id);
 create policy "Users can create their own profile"
@@ -55,6 +59,10 @@ create trigger on_auth_user_created
 insert into storage.buckets (id, name, public)
 values ('documents', 'documents', false)
 on conflict (id) do nothing;
+
+drop policy if exists "Users can upload their own documents" on storage.objects;
+drop policy if exists "Users can read their own documents" on storage.objects;
+drop policy if exists "Users can delete their own documents" on storage.objects;
 
 create policy "Users can upload their own documents"
   on storage.objects for insert to authenticated
