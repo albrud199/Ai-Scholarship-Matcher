@@ -52,6 +52,14 @@ export function getScoreLabel(score: number): string {
   return 'Needs Improvement';
 }
 
+/** Student-friendly wording for a profile-fit score (not an admission chance). */
+export function getMatchLabel(score: number): string {
+  if (score >= 80) return 'Strong match';
+  if (score >= 60) return 'Good match';
+  if (score >= 40) return 'Possible match';
+  return 'Long shot';
+}
+
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length).trim() + '...';

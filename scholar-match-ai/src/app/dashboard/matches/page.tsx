@@ -6,13 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MatchExplainer } from '@/components/match-explainer';
-import { seedScholarships, studentProfile } from '@/lib/mock-data';
-import { rankScholarships } from '@/lib/matching';
+import { seedScholarships } from '@/lib/mock-data';
+import { getMatchDataCoverage, MATCH_DATA_COVERAGE_THRESHOLD, rankScholarships } from '@/lib/matching';
+import { useStudentProfile } from '@/lib/use-student-profile';
 import { getScoreColor, getDaysUntil, cn } from '@/lib/utils';
 import { ChevronRight, CheckCircle2, XCircle, Target, Info } from 'lucide-react';
 
 export default function MatchesPage() {
-  const matches = useMemo(() => rankScholarships(studentProfile, seedScholarships), []);
+  const { profile } = useStudentProfile();
+  const matches = useMemo(() => rankScholarships(profile, seedScholarships), [profile]);
+  const dataCoverage = matches.length
+    ? Math.round(matches.reduce((acc, m) => acc + getMatchDataCoverage(m), 0) / matches.length)
+    : 0;
+  const scoresReady = dataCoverage >= MATCH_DATA_COVERAGE_THRESHOLD;
   const [selectedId, setSelectedId] = useState<string>(matches[0]?.score.scholarship_id ?? '');
   const [showWhyNot, setShowWhyNot] = useState(false);
 
@@ -34,6 +40,22 @@ export default function MatchesPage() {
           Profile fit ≠ admission probability
         </Badge>
       </div>
+
+      {!scoresReady && (
+        <Card className="border-warning-500/40 bg-warning-50/60">
+          <CardContent className="p-4 text-sm">
+            <p className="font-semibold">These rankings are still mostly guesswork</p>
+            <p className="text-muted-foreground mt-1">
+              Only {dataCoverage}% of each score could be built from your profile. Add your grades, English score and
+              experience on the{' '}
+              <Link href="/dashboard/profile" className="text-primary hover:underline">
+                profile page
+              </Link>{' '}
+              and every number here becomes real. Until then, each breakdown shows exactly which part is waiting on you.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid min-w-0 lg:grid-cols-[340px_1fr] gap-6 items-start">
         {/* Ranked list */}
@@ -57,8 +79,13 @@ export default function MatchesPage() {
                 aria-current={isActive ? 'true' : undefined}
               >
                 <span className="text-xs font-bold text-muted-foreground w-5">#{rank + 1}</span>
-                <div className={cn('flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 flex-shrink-0', getScoreColor(score.score))}>
-                  <span className="text-lg font-bold leading-none">{score.score}</span>
+                <div
+                  className={cn(
+                    'flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 flex-shrink-0',
+                    scoresReady ? getScoreColor(score.score) : 'bg-secondary text-muted-foreground'
+                  )}
+                >
+                  <span className="text-lg font-bold leading-none">{scoresReady ? score.score : '—'}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium leading-snug truncate">{sch.name}</p>
@@ -98,7 +125,7 @@ export default function MatchesPage() {
                 </CardContent>
               </Card>
             ) : (
-              <MatchExplainer result={selected} scholarship={selectedScholarship} profile={studentProfile} />
+              <MatchExplainer result={selected} scholarship={selectedScholarship} profile={profile} />
             )
           ) : (
             <Card>

@@ -1,13 +1,15 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MATCH_WEIGHTS, whyNotRecommended, requirementLabel, type MatchResult } from '@/lib/matching';
+import { MATCH_WEIGHTS, whyNotRecommended, requirementLabel, getMatchDataCoverage, getMatchDataGaps, factorWeightPercent, MISSING_FACT_LABELS, MATCH_DATA_COVERAGE_THRESHOLD, type MatchResult } from '@/lib/matching';
 import { getScoreColor, cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, Quote, HelpCircle, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, Quote, HelpCircle, ThumbsUp, ThumbsDown, Info, Heart } from 'lucide-react';
+import Link from 'next/link';
 import { Scholarship, Profile } from '@/types';
 
 interface MatchExplainerProps {
@@ -30,6 +32,9 @@ export function MatchExplainer({ result, scholarship, profile }: MatchExplainerP
   const positiveFactors = score.breakdown.factors.filter((f) => f.is_positive);
   const negativeFactors = score.breakdown.factors.filter((f) => !f.is_positive);
   const whyNot = whyNotRecommended(result, profile, scholarship);
+  const coverage = getMatchDataCoverage(result);
+  const scoresReady = coverage >= MATCH_DATA_COVERAGE_THRESHOLD;
+  const gaps = getMatchDataGaps(result);
 
   return (
     <div className="space-y-4">
@@ -43,13 +48,17 @@ export function MatchExplainer({ result, scholarship, profile }: MatchExplainerP
                 Deterministic profile-fit score — computed from structured requirements, never an AI guess. Not an admission probability.
               </CardDescription>
             </div>
-            <div className={cn('flex flex-col items-center justify-center rounded-xl px-5 py-3', getScoreColor(score.score))}>
-              <span className="text-3xl font-bold leading-none">{score.score}</span>
-              <span className="text-xs font-medium mt-1">/ 100</span>
+            <div className={cn('flex flex-col items-center justify-center rounded-xl px-5 py-3', scoresReady ? getScoreColor(score.score) : 'bg-secondary text-muted-foreground')}>
+              <span className="text-3xl font-bold leading-none">{scoresReady ? score.score : '—'}</span>
+              <span className="text-xs font-medium mt-1">{scoresReady ? '/ 100' : 'needs profile'}</span>
             </div>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {score.eligibility_passed ? (
+            {!scoresReady ? (
+              <Badge variant="secondary" className="gap-1">
+                <Info className="h-3.5 w-3.5" /> Add your details to check the must-have requirements
+              </Badge>
+            ) : score.eligibility_passed ? (
               <Badge variant="success" className="gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" /> All hard requirements passed
               </Badge>
@@ -59,6 +68,24 @@ export function MatchExplainer({ result, scholarship, profile }: MatchExplainerP
               </Badge>
             )}
           </div>
+          {!scoresReady && (
+            <div className="mt-3 rounded-lg border border-warning-500/40 bg-warning-50/60 p-3 text-sm">
+              <p className="font-medium flex items-center gap-1.5">
+                <Heart className="h-4 w-4 text-warning-600" /> We only have {coverage}% of what this score needs
+              </p>
+              <p className="text-muted-foreground mt-1">Add these once and the number appears instantly:</p>
+              <ul className="mt-1.5 space-y-1 text-muted-foreground">
+                {gaps.map((g) => (
+                  <li key={g.category}>
+                    • {MISSING_FACT_LABELS[g.category] ?? g.label} — unlocks {factorWeightPercent(g.category)}% of the score
+                  </li>
+                ))}
+              </ul>
+              <Button asChild size="sm" variant="outline" className="mt-2">
+                <Link href="/dashboard/profile">Complete my profile</Link>
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -74,8 +101,8 @@ export function MatchExplainer({ result, scholarship, profile }: MatchExplainerP
                       : ''}
                   </span>
                 </div>
-                <Progress value={f.score} className={cn('h-1.5', !f.is_positive && 'opacity-70')} />
-                <span className="text-xs text-muted-foreground">{f.score}/100</span>
+                <Progress value={f.data_missing ? 0 : f.score} className={cn('h-1.5', (f.data_missing || !f.is_positive) && 'opacity-70')} />
+                <span className="text-xs text-muted-foreground">{f.data_missing ? 'not enough info yet' : `${f.score}/100`}</span>
               </div>
             ))}
           </div>
@@ -119,9 +146,13 @@ export function MatchExplainer({ result, scholarship, profile }: MatchExplainerP
                   <XCircle className="h-4 w-4 text-danger-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
                     <p className="font-medium">
-                      {weightLabels[f.category] ?? f.label} — {f.score}/100
+                      {weightLabels[f.category] ?? f.label} — {f.data_missing ? 'not enough info yet' : `${f.score}/100`}
                     </p>
-                    <p className="text-muted-foreground mt-0.5">{f.evidence}</p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {f.data_missing
+                        ? `Add ${MISSING_FACT_LABELS[f.category] ?? 'this detail'} to your profile to unlock ${factorWeightPercent(f.category)}% of the score.`
+                        : f.evidence}
+                    </p>
                   </div>
                 </div>
               ))}

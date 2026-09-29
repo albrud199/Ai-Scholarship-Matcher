@@ -162,7 +162,15 @@ function academicsFactor(profile: Profile, evals: RequirementEvaluation[]): Matc
     evidence += ' Meets the stated academic requirement.';
   }
 
-  return { category: 'academics', label: 'Academics', score, max_score: 100, evidence: evidence.trim(), is_positive: score >= 60 };
+  return {
+    category: 'academics',
+    label: 'Academics',
+    score,
+    max_score: 100,
+    evidence: evidence.trim(),
+    is_positive: score >= 60,
+    data_missing: gpa == null,
+  };
 }
 
 function experienceFactor(profile: Profile, evals: RequirementEvaluation[]): MatchFactor {
@@ -192,7 +200,15 @@ function experienceFactor(profile: Profile, evals: RequirementEvaluation[]): Mat
     evidence += ' Meets the stated experience requirement.';
   }
 
-  return { category: 'experience', label: 'Experience', score, max_score: 100, evidence: evidence.trim(), is_positive: score >= 60 };
+  return {
+    category: 'experience',
+    label: 'Experience',
+    score,
+    max_score: 100,
+    evidence: evidence.trim(),
+    is_positive: score >= 60,
+    data_missing: profile.work_experience.length === 0 && profile.leadership_experience.length === 0,
+  };
 }
 
 function researchFactor(profile: Profile, evals: RequirementEvaluation[]): MatchFactor {
@@ -214,7 +230,15 @@ function researchFactor(profile: Profile, evals: RequirementEvaluation[]): Match
     }
   }
 
-  return { category: 'research', label: 'Research & Profile Fit', score, max_score: 100, evidence: evidence.trim(), is_positive: score >= 60 };
+  return {
+    category: 'research',
+    label: 'Research & Profile Fit',
+    score,
+    max_score: 100,
+    evidence: evidence.trim(),
+    is_positive: score >= 60,
+    data_missing: profile.research_experience.length === 0 && profile.publications.length === 0,
+  };
 }
 
 function languageFactor(profile: Profile, evals: RequirementEvaluation[]): MatchFactor {
@@ -248,7 +272,15 @@ function languageFactor(profile: Profile, evals: RequirementEvaluation[]): Match
     evidence += ` Fails: ${failedLang.map((e) => requirementLabel(e.requirement)).join('; ')}.`;
   }
 
-  return { category: 'language', label: 'Language', score, max_score: 100, evidence: evidence.trim(), is_positive: score >= 60 };
+  return {
+    category: 'language',
+    label: 'Language',
+    score,
+    max_score: 100,
+    evidence: evidence.trim(),
+    is_positive: score >= 60,
+    data_missing: ielts == null && toefl == null && Object.keys(profile.other_language_scores ?? {}).length === 0,
+  };
 }
 
 function scholarshipFitFactor(profile: Profile, scholarship: Scholarship, evals: RequirementEvaluation[]): MatchFactor {
@@ -302,6 +334,7 @@ function scholarshipFitFactor(profile: Profile, scholarship: Scholarship, evals:
     max_score: 100,
     evidence: parts.join(' '),
     is_positive: score >= 60,
+    data_missing: !profile.target_field_of_study.trim() || profile.constraints.preferred_countries.length === 0,
   };
 }
 
@@ -309,6 +342,48 @@ export interface MatchResult {
   score: MatchScore;
   evaluations: RequirementEvaluation[];
 }
+
+/**
+ * Coverage below this percentage means most of the weighted score came from
+ * missing profile data, so the number must never be shown to a student as their match.
+ */
+export const MATCH_DATA_COVERAGE_THRESHOLD = 60;
+
+/** Share of the final score that a single factor controls, as a whole percentage. */
+export function factorWeightPercent(category: string): number {
+  return Math.round((MATCH_WEIGHTS[category as keyof typeof MATCH_WEIGHTS] ?? 0) * 100);
+}
+
+/**
+ * Weighted share of the score that rests on facts the student actually provided.
+ * 100 = every factor had data, 0 = nothing to score yet.
+ */
+export function getMatchDataCoverage(result: MatchResult): number {
+  const coverage = result.score.breakdown.factors.reduce((acc, factor) => {
+    const weight = MATCH_WEIGHTS[factor.category as keyof typeof MATCH_WEIGHTS] ?? 0;
+    return acc + (factor.data_missing ? 0 : weight);
+  }, 0);
+  return Math.round(coverage * 100);
+}
+
+/** True only when enough profile facts exist for the score to mean something. */
+export function isMatchScoreReliable(result: MatchResult): boolean {
+  return getMatchDataCoverage(result) >= MATCH_DATA_COVERAGE_THRESHOLD;
+}
+
+/** The profile sections a student still has to fill in before the score is meaningful. */
+export function getMatchDataGaps(result: MatchResult): MatchFactor[] {
+  return result.score.breakdown.factors.filter((f) => f.data_missing);
+}
+
+/** Plain-language name of the profile section that unlocks a factor. */
+export const MISSING_FACT_LABELS: Record<string, string> = {
+  academics: 'your GPA / grades',
+  experience: 'your work or leadership experience',
+  research: 'your research projects or publications',
+  language: 'your English test score (IELTS / TOEFL)',
+  scholarship_fit: 'your target field and preferred countries',
+};
 
 /**
  * Compute the full deterministic match result for a profile/scholarship pair.
@@ -398,6 +473,12 @@ export function whyNotRecommended(result: MatchResult, profile: Profile, scholar
   result.evaluations
     .filter((e) => e.requirement.is_hard_requirement && !e.passed)
     .forEach((e) => {
+      if (e.actual === 'not provided') {
+        reasons.push(
+          `We cannot check this one yet: ${requirementLabel(e.requirement)}. Add that detail to your profile. Source: "${e.requirement.evidence_span}"`
+        );
+        return;
+      }
       reasons.push(
         `Hard requirement not met: ${requirementLabel(e.requirement)}. Your profile: ${e.actual ?? 'not provided'}. Source: "${e.requirement.evidence_span}"`
       );
@@ -406,6 +487,12 @@ export function whyNotRecommended(result: MatchResult, profile: Profile, scholar
   result.score.breakdown.factors
     .filter((f) => !f.is_positive)
     .forEach((f) => {
+      if (f.data_missing) {
+        reasons.push(
+          `${factorWeightPercent(f.category)}% of this score is still blank: add ${MISSING_FACT_LABELS[f.category] ?? f.label} to your profile to unlock it.`
+        );
+        return;
+      }
       reasons.push(`${f.label} is weak (${f.score}/100): ${f.evidence}`);
     });
 

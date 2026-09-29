@@ -1,15 +1,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScholarshipCard } from '@/components/scholarship-card';
-import { seedScholarships, studentProfile, COUNTRIES, FIELDS_OF_STUDY, DEGREE_LEVELS } from '@/lib/mock-data';
-import { computeMatch } from '@/lib/matching';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { seedScholarships, COUNTRIES, FIELDS_OF_STUDY, DEGREE_LEVELS } from '@/lib/mock-data';
+import { computeMatch, getMatchDataCoverage, MATCH_DATA_COVERAGE_THRESHOLD } from '@/lib/matching';
+import { useStudentProfile } from '@/lib/use-student-profile';
+import { Search, SlidersHorizontal, X, User, ArrowRight } from 'lucide-react';
 
 interface Filters {
   query: string;
@@ -29,6 +31,7 @@ const DEADLINE_WINDOWS = [
 ];
 
 export default function ScholarshipsPage() {
+  const { profile, loading, hasSavedProfile } = useStudentProfile();
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   const [savedIds, setSavedIds] = useState<string[]>([]);
 
@@ -52,9 +55,15 @@ export default function ScholarshipsPage() {
         }
         return true;
       })
-      .map((s) => ({ scholarship: s, match: computeMatch(studentProfile, s).score }))
-      .sort((a, b) => b.match.score - a.match.score);
-  }, [filters]);
+      .map((s) => ({ scholarship: s, match: computeMatch(profile, s) }))
+      .sort((a, b) => b.match.score.score - a.match.score.score);
+  }, [filters, profile]);
+
+  // How much of the score the student's current profile actually supports.
+  const dataCoverage = results.length
+    ? Math.round(results.reduce((acc, r) => acc + getMatchDataCoverage(r.match), 0) / results.length)
+    : 0;
+  const matchScoresReady = dataCoverage >= MATCH_DATA_COVERAGE_THRESHOLD;
 
   const activeFilterCount =
     (filters.country !== 'any' ? 1 : 0) +
@@ -70,9 +79,36 @@ export default function ScholarshipsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Scholarships</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {seedScholarships.filter((s) => s.status === 'active').length} verified, sourced awards. Ranked by your deterministic match score.
+          {seedScholarships.filter((s) => s.status === 'active').length} verified awards. Open any card&apos;s
+          <span className="font-medium"> Details </span> button for eligibility, benefits and why a scholarship fits you.
         </p>
       </div>
+
+      {/* Profile progress: the honest reason a score can be missing */}
+      {!loading && !matchScoresReady && (
+        <Card className="border-primary/30 bg-primary-50/40">
+          <CardContent className="p-5 flex flex-wrap items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+              <User className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-[240px]">
+              <p className="font-semibold">
+                {hasSavedProfile ? 'Your profile is missing a few details' : 'Add a few details to unlock your match scores'}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                We can only build {dataCoverage}% of the match score from what we know about you, so instead of showing a
+                number that mostly reflects missing information, each card tells you what is still needed. Add your GPA,
+                English test score, experience and target field to see real scores.
+              </p>
+            </div>
+            <Button asChild>
+              <Link href="/dashboard/profile">
+                Complete my profile <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search bar */}
       <div className="relative">
@@ -156,14 +192,17 @@ export default function ScholarshipsPage() {
         <>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Badge variant="secondary">{results.length} results</Badge>
-            <span>· sorted by match score</span>
+            <span>
+              · {matchScoresReady ? 'sorted by your match score' : 'sorted by best available fit — add your details for exact scores'}
+            </span>
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {results.map(({ scholarship, match }) => (
               <ScholarshipCard
                 key={scholarship.id}
                 scholarship={scholarship}
-                matchScore={match}
+                match={match}
+                profile={profile}
                 isSaved={savedIds.includes(scholarship.id)}
                 onAddApplication={handleSave}
               />

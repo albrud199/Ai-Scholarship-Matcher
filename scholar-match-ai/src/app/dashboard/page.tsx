@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ScholarshipCard } from '@/components/scholarship-card';
-import { seedScholarships, studentProfile, studentApplications } from '@/lib/mock-data';
-import { rankScholarships } from '@/lib/matching';
+import { seedScholarships, studentApplications } from '@/lib/mock-data';
+import { useStudentProfile } from '@/lib/use-student-profile';
+import { getMatchDataCoverage, MATCH_DATA_COVERAGE_THRESHOLD, rankScholarships } from '@/lib/matching';
 import { computeReadiness, generateBestNextActions } from '@/lib/readiness';
 import { getDaysUntil, getScoreColor, getScoreLabel, getDeadlineStatus, cn } from '@/lib/utils';
 import {
@@ -26,20 +26,26 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const matches = useMemo(() => rankScholarships(studentProfile, seedScholarships), []);
+  const { profile } = useStudentProfile();
+
+  const matches = useMemo(() => rankScholarships(profile, seedScholarships), [profile]);
+  const dataCoverage = matches.length
+    ? Math.round(matches.reduce((acc, m) => acc + getMatchDataCoverage(m), 0) / matches.length)
+    : 0;
+  const scoresReady = dataCoverage >= MATCH_DATA_COVERAGE_THRESHOLD;
   const eligible = matches.filter((m) => m.score.eligibility_passed);
   const avgMatch = Math.round(eligible.reduce((a, m) => a + m.score.score, 0) / Math.max(1, eligible.length));
   const topMatches = matches.slice(0, 3);
-  const hasProfile = Boolean(studentProfile.full_name.trim() && studentProfile.target_field_of_study.trim());
+  const hasProfile = Boolean(profile.full_name.trim() && profile.target_field_of_study.trim());
 
   const scholarshipById = useMemo(() => Object.fromEntries(seedScholarships.map((s) => [s.id, s])), []);
   const readinessByApp = useMemo(
-    () => studentApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], studentProfile) })),
-    [scholarshipById]
+    () => studentApplications.map((app) => ({ app, readiness: computeReadiness(app, scholarshipById[app.scholarship_id], profile) })),
+    [scholarshipById, profile]
   );
   const avgReadiness = Math.round(readinessByApp.reduce((a, r) => a + r.readiness.overall_score, 0) / Math.max(1, readinessByApp.length));
 
-  const actions = useMemo(() => generateBestNextActions(studentApplications, scholarshipById, studentProfile), [scholarshipById]);
+  const actions = useMemo(() => generateBestNextActions(studentApplications, scholarshipById, profile), [scholarshipById, profile]);
   const bestAction = actions[0];
 
   const upcoming = useMemo(
@@ -56,7 +62,7 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{studentProfile.full_name ? `Welcome back, ${studentProfile.full_name.split(' ')[0]}` : 'Start your scholarship journey'}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{profile.full_name ? `Welcome back, ${profile.full_name.split(' ')[0]}` : 'Start your scholarship journey'}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Here&apos;s where your scholarship journey stands today.
           </p>
@@ -87,8 +93,12 @@ export default function DashboardPage() {
             <div className="flex min-w-0 items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Best match score</p>
-                <p className={cn('text-2xl font-bold mt-1', getScoreColor(avgMatch).split(' ')[0])}>{avgMatch}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{getScoreLabel(avgMatch)} · {eligible.length} eligible</p>
+                <p className={cn('text-2xl font-bold mt-1', scoresReady ? getScoreColor(avgMatch).split(' ')[0] : 'text-muted-foreground')}>
+                  {scoresReady ? avgMatch : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {scoresReady ? `${getScoreLabel(avgMatch)} · ${eligible.length} eligible` : `Add your details · ${dataCoverage}% of score built`}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
                 <Target className="h-5 w-5" />
@@ -226,8 +236,13 @@ export default function DashboardPage() {
                   className="flex items-center gap-3 rounded-lg border p-3 hover:border-primary/40 transition-colors"
                 >
                   <span className="text-xs font-bold text-muted-foreground w-5">#{rank + 1}</span>
-                  <div className={cn('flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 flex-shrink-0', getScoreColor(score.score))}>
-                    <span className="text-base font-bold leading-none">{score.score}</span>
+                  <div
+                    className={cn(
+                      'flex flex-col items-center justify-center rounded-lg px-2.5 py-1.5 flex-shrink-0',
+                      scoresReady ? getScoreColor(score.score) : 'bg-secondary text-muted-foreground'
+                    )}
+                  >
+                    <span className="text-base font-bold leading-none">{scoresReady ? score.score : '—'}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{sch.name}</p>

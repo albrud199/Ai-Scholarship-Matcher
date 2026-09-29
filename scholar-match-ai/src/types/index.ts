@@ -189,6 +189,8 @@ export interface MatchFactor {
   max_score: number;
   evidence: string;
   is_positive: boolean;
+  /** True when the profile had no facts for this factor, so its score is not a real judgement. */
+  data_missing?: boolean;
 }
 
 export interface ChatMessage {
