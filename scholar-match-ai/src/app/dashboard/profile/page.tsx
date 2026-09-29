@@ -1,14 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { studentProfile, COUNTRIES, FIELDS_OF_STUDY } from '@/lib/mock-data';
-import type { Profile, ResearchExperience, WorkExperience, LeadershipExperience, Publication, Award } from '@/types';
+import { COUNTRIES, FIELDS_OF_STUDY } from '@/lib/mock-data';
+import type { Profile } from '@/types';
+import {
+  EMPTY_PROFILE_FORM,
+  isFormBlank,
+  loadDraft,
+  mergeForms,
+  rowToFormState,
+  saveDraft,
+  toProfileRow,
+  type ProfileFormState,
+} from '@/lib/profile-form';
 import {
   User,
   GraduationCap,
@@ -26,6 +36,10 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
+const AUTOSAVE_DELAY_MS = 400;
+/** How long a pause counts as "finished for now" before the form is pushed to Supabase. */
+const BACKGROUND_SYNC_DELAY_MS = 1500;
+
 const STEPS = [
   { id: 'personal', label: 'Personal', icon: User, description: 'Identity and current studies' },
   { id: 'education', label: 'Education', icon: GraduationCap, description: 'Degree target and field' },
@@ -35,125 +49,156 @@ const STEPS = [
   { id: 'constraints', label: 'Constraints', icon: SlidersHorizontal, description: 'Countries, budget, funding' },
 ];
 
-interface ProfileFormState {
-  fullName: string;
-  nationality: string;
-  currentDegree: string;
-  currentInstitution: string;
-  targetDegreeLevel: Profile['target_degree_level'];
-  targetFieldOfStudy: string;
-  gpa: string;
-  gpaScale: string;
-  ielts: string;
-  toefl: string;
-  goals: string;
-  preferredCountries: string[];
-  excludeCountries: string[];
-  maxTuitionBudget: string;
-  fundingType: Profile['constraints']['funding_type'];
-  research: ResearchExperience[];
-  work: WorkExperience[];
-  leadership: LeadershipExperience[];
-  publications: Publication[];
-  awards: Award[];
-}
-
-function fromProfile(p: Profile): ProfileFormState {
-  return {
-    fullName: p.full_name,
-    nationality: p.nationality,
-    currentDegree: p.current_degree,
-    currentInstitution: p.current_institution,
-    targetDegreeLevel: p.target_degree_level,
-    targetFieldOfStudy: p.target_field_of_study,
-    gpa: p.gpa?.toString() ?? '',
-    gpaScale: p.gpa_scale ?? '4.0',
-    ielts: p.ielts_score?.toString() ?? '',
-    toefl: p.toefl_score?.toString() ?? '',
-    goals: p.goals,
-    preferredCountries: p.constraints.preferred_countries,
-    excludeCountries: p.constraints.exclude_countries,
-    maxTuitionBudget: p.constraints.max_tuition_budget?.toString() ?? '',
-    fundingType: p.constraints.funding_type,
-    research: p.research_experience,
-    work: p.work_experience,
-    leadership: p.leadership_experience,
-    publications: p.publications,
-    awards: p.awards,
-  };
-}
-
 export default function ProfilePage() {
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [form, setForm] = useState<ProfileFormState>(() => fromProfile(studentProfile));
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'local'>('idle');
+  // Null until the local draft has been read. Seeding state during render would
+  // make the server render and the browser render disagree, which React resolves
+  // by throwing the whole form away and re-mounting it as blank.
+  const [form, setForm] = useState<ProfileFormState | null>(null);
+  // The signed-in student, once Supabase reports one. Scopes the local draft and
+  // marks what has already been pushed to the database.
+  const [userId, setUserId] = useState<string | null>(null);
+  const lastSynced = useRef('');
+  const formRef = useRef<ProfileFormState | null>(null);
+
+  // Hydrate from the local draft after mount, then keep the draft in step with
+  // every keystroke. Both run against the in-memory mirror in profile-form, so the
+  // answers survive a trip to another page even when the browser refuses to write
+  // localStorage. Scribbling a half-typed profile to the database is only done
+  // once the student pauses typing (see below).
+  //
+  // This must stay idempotent rather than guarded by a ref: React StrictMode
+  // mounts, discards, and re-mounts, so a one-shot guard would run against the
+  // thrown-away tree and leave the real one stuck on the loading state forever.
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      formRef.current = draft;
+      setForm(draft);
+    } else {
+      // No draft yet — show the blank form immediately instead of waiting on the
+      // database round trip. The saved row, if any, replaces it below.
+      setForm((current) => current ?? EMPTY_PROFILE_FORM);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!form) return;
+    formRef.current = form;
+    const timer = setTimeout(() => saveDraft(form, userId), AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [form, userId]);
+
+  // Load the saved profile and the signed-in user together, so nothing typed
+  // before the account is known can be attributed to the wrong student.
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+
+    const load = async () => {
+      const { data: authData } = await supabase!.auth.getUser();
+      if (cancelled) return;
+
+      const uid = authData.user?.id ?? null;
+      setUserId(uid);
+      if (!uid) return;
+
+      const { data, error } = await supabase!
+        .from('profiles')
+        .select('*')
+        .eq('user_id', uid)
+        .maybeSingle();
+
+      if (cancelled || error || !data) return;
+
+      const savedForm = rowToFormState(data as Partial<Profile>);
+      const draft = loadDraft(uid);
+      const merged = mergeForms(savedForm, draft);
+
+      setForm((current) => (isFormBlank(current ?? EMPTY_PROFILE_FORM) ? merged : current));
+      lastSynced.current = JSON.stringify(merged);
+      saveDraft(merged, uid);
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** Push the form to Supabase; resolve false when it only made it to this device. */
+  const syncToServer = async (current: ProfileFormState, uid: string | null): Promise<boolean> => {
+    if (!supabase || !uid) return false;
+
+    setStatus('saving');
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(toProfileRow(current, uid), { onConflict: 'user_id' });
+
+    if (error) {
+      setSaveError(`Saved on this device only — could not sync: ${error.message}`);
+      setStatus('local');
+      return false;
+    }
+
+    lastSynced.current = JSON.stringify(current);
+    saveDraft(current, uid);
+    setSaveError('');
+    setStatus('saved');
+    return true;
+  };
+
+  // Quietly mirror the profile to the database after the student pauses typing, so
+  // a change is never lost just because the page was left before pressing "Save draft".
+  useEffect(() => {
+    if (!supabase || !userId || !form) return;
+    const serialized = JSON.stringify(form);
+    if (serialized === lastSynced.current) return;
+
+    const timer = setTimeout(() => {
+      void syncToServer(form, userId);
+    }, BACKGROUND_SYNC_DELAY_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, userId]);
 
   const set = <K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({ ...(f ?? EMPTY_PROFILE_FORM), [key]: value }));
     setSaved(false);
+    setSaveError('');
+    setStatus('idle');
   };
+
+  const activeForm = form ?? EMPTY_PROFILE_FORM;
 
   const completion = useMemo(() => {
     const checks = [
-      form.fullName.trim().length > 0,
-      form.nationality.trim().length > 0,
-      form.currentInstitution.trim().length > 0,
-      form.targetFieldOfStudy.trim().length > 0,
-      form.gpa.trim().length > 0,
-      form.ielts.trim().length > 0 || form.toefl.trim().length > 0,
-      form.work.length + form.leadership.length > 0,
-      form.research.length + form.publications.length > 0,
-      form.goals.trim().length > 50,
-      form.preferredCountries.length > 0,
+      activeForm.fullName.trim().length > 0,
+      activeForm.nationality.trim().length > 0,
+      activeForm.currentInstitution.trim().length > 0,
+      activeForm.targetFieldOfStudy.trim().length > 0,
+      activeForm.gpa.trim().length > 0,
+      activeForm.ielts.trim().length > 0 || activeForm.toefl.trim().length > 0,
+      activeForm.work.length + activeForm.leadership.length > 0,
+      activeForm.research.length + activeForm.publications.length > 0,
+      activeForm.goals.trim().length > 50,
+      activeForm.preferredCountries.length > 0,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  }, [form]);
+  }, [activeForm]);
 
   const handleSave = async () => {
+    // The draft is already mirrored on every keystroke; this is the explicit
+    // "keep it on this device now" write before any network work happens.
+    saveDraft(activeForm, userId);
     setSaveError('');
-    if (!supabase) {
-      setSaveError('Supabase is not configured. Add the public Supabase variables to your environment.');
-      return;
-    }
 
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData.user) {
-      setSaveError('Please sign in again before saving your profile.');
-      return;
-    }
-
-    const { error } = await supabase.from('profiles').upsert({
-      user_id: authData.user.id,
-      full_name: form.fullName,
-      nationality: form.nationality,
-      current_degree: form.currentDegree,
-      current_institution: form.currentInstitution,
-      target_degree_level: form.targetDegreeLevel,
-      target_field_of_study: form.targetFieldOfStudy,
-      gpa: form.gpa ? Number(form.gpa) : null,
-      gpa_scale: form.gpaScale,
-      ielts_score: form.ielts ? Number(form.ielts) : null,
-      toefl_score: form.toefl ? Number(form.toefl) : null,
-      research_experience: form.research,
-      work_experience: form.work,
-      leadership_experience: form.leadership,
-      publications: form.publications,
-      awards: form.awards,
-      goals: form.goals,
-      constraints: {
-        preferred_countries: form.preferredCountries,
-        exclude_countries: form.excludeCountries,
-        max_tuition_budget: form.maxTuitionBudget ? Number(form.maxTuitionBudget) : undefined,
-        language_requirements: [],
-        funding_type: form.fundingType,
-      },
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
-
-    if (error) {
-      setSaveError(error.message);
-      return;
+    const ok = await syncToServer(activeForm, userId);
+    if (!ok && !userId) {
+      setSaveError('Saved on this device only — sign in again to sync your profile.');
     }
 
     setSaved(true);
@@ -174,6 +219,14 @@ export default function ProfilePage() {
           <div className="text-right">
             <p className="text-sm font-semibold">{completion}% complete</p>
             <Progress value={completion} className="w-32 mt-1" />
+            {status !== 'idle' && (
+              <p
+                className={cn('text-xs mt-1', status === 'local' ? 'text-warning-600' : 'text-muted-foreground')}
+                role="status"
+              >
+                {status === 'saving' ? 'Saving…' : status === 'saved' ? 'All changes saved' : 'Saved on this device'}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -204,6 +257,10 @@ export default function ProfilePage() {
           <CardDescription>{STEPS[step].description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {form === null ? (
+            <p className="text-sm text-muted-foreground">Loading your saved profile…</p>
+          ) : (
+            <>
           {step === 0 && (
             <div className="grid sm:grid-cols-2 gap-4">
               <Input label="Full name" value={form.fullName} onChange={(e) => set('fullName', e.target.value)} placeholder="Alex Johnson" />
@@ -339,6 +396,8 @@ export default function ProfilePage() {
             </div>
           )}
           {step === 5 && <ConstraintsStep form={form} set={set} />}
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -349,16 +408,16 @@ export default function ProfilePage() {
           <ChevronLeft className="mr-1 h-4 w-4" /> Back
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={handleSave}>
+          <Button variant="ghost" onClick={handleSave} disabled={form === null}>
             <Save className="mr-2 h-4 w-4" />
             {saved ? 'Saved!' : 'Save draft'}
           </Button>
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
+            <Button onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} disabled={form === null}>
               Next <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={form === null}>
               <Check className="mr-2 h-4 w-4" /> Finish
             </Button>
           )}
