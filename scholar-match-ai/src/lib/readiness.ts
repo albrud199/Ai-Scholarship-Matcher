@@ -34,8 +34,8 @@ export function computeReadiness(
 
   const components: ReadinessComponent[] = [];
 
-  // 1. Documents (25 pts)
-  const expectedDocs = ['transcript', 'cv', 'sop', 'language_test'];
+  // 1. Documents (25 pts) - transcript, CV, language test (SOP is separate)
+  const expectedDocs = ['transcript', 'cv', 'language_test'];
   const docTypes = new Set(application.documents.map((d) => d.type));
   const haveDocs = expectedDocs.filter((t) => docTypes.has(t as never)).length;
   const verifiedDocs = application.documents.filter((d) => d.verification_state === 'verified').length;
@@ -45,8 +45,8 @@ export function computeReadiness(
     score: docScore,
     max_score: 25,
     weight: 0.25,
-    status: docScore >= 20 ? 'complete' : docScore > 0 ? 'in_progress' : 'missing',
-    details: `${haveDocs}/4 core documents uploaded (${verifiedDocs} verified by AI checks).`,
+    status: docScore >= 23 ? 'complete' : docScore > 0 ? 'in_progress' : 'missing',
+    details: `${haveDocs}/3 core documents uploaded (${verifiedDocs} verified by AI checks).`,
   });
 
   // 2. SOP / essay (20 pts)
@@ -66,8 +66,9 @@ export function computeReadiness(
 
   // 3. References (20 pts)
   const submitted = application.references.filter((r) => r.status === 'submitted').length;
-  const requested = application.references.length;
-  const refScore = Math.min(20, submitted * 10 + requested * 2);
+  const totalRefs = application.references.length;
+  const pending = totalRefs - submitted;
+  const refScore = Math.min(20, submitted * 10 + pending * 2);
   components.push({
     name: 'References',
     score: refScore,
@@ -75,9 +76,9 @@ export function computeReadiness(
     weight: 0.2,
     status: submitted >= 2 ? 'complete' : refScore > 0 ? 'in_progress' : 'missing',
     details:
-      requested === 0
+      totalRefs === 0
         ? 'No references requested yet.'
-        : `${submitted}/${requested} submitted.`,
+        : `${submitted}/${totalRefs} submitted${pending > 0 ? ` (${pending} pending)` : ''}.`,
   });
 
   // 4. Profile strength (20 pts)
