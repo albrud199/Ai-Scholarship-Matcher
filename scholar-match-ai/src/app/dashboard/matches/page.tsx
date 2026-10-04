@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +21,16 @@ export default function MatchesPage() {
   const scoresReady = dataCoverage >= MATCH_DATA_COVERAGE_THRESHOLD;
   const [selectedId, setSelectedId] = useState<string>(matches[0]?.score.scholarship_id ?? '');
   const [showWhyNot, setShowWhyNot] = useState(false);
+
+  // Dashboard match cards pass the scholarship id so the matching detail opens
+  // for the item the student clicked instead of always showing the first match.
+  useEffect(() => {
+    const requestedId = new URLSearchParams(window.location.search).get('scholarship');
+    if (requestedId && matches.some((m) => m.score.scholarship_id === requestedId)) {
+      setSelectedId(requestedId);
+      setShowWhyNot(false);
+    }
+  }, [matches]);
 
   const selected = matches.find((m) => m.score.scholarship_id === selectedId) ?? matches[0];
   const selectedScholarship = seedScholarships.find((s) => s.id === selected?.score.scholarship_id);

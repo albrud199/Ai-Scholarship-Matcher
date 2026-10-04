@@ -232,7 +232,7 @@ export default function DashboardPage() {
               return (
                 <Link
                   key={score.scholarship_id}
-                  href="/dashboard/matches"
+                  href={`/dashboard/matches?scholarship=${encodeURIComponent(score.scholarship_id)}`}
                   className="flex items-center gap-3 rounded-lg border p-3 hover:border-primary/40 transition-colors"
                 >
                   <span className="text-xs font-bold text-muted-foreground w-5">#{rank + 1}</span>
