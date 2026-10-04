@@ -43,13 +43,23 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
+    
+    // When using asChild, don't spread button-specific props to the child component
+    // (like Link from Next.js) as they can interfere with navigation
+    const childProps = asChild 
+      ? {} 
+      : { disabled: disabled || loading, 'aria-busy': loading, ...props };
+    
+    const buttonProps = asChild
+      ? { ...props }
+      : {};
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        disabled={disabled || loading}
-        aria-busy={loading}
-        {...props}
+        ref={asChild ? undefined : ref}
+        {...childProps}
+        {...buttonProps}
       >
         {loading ? (
           <>
