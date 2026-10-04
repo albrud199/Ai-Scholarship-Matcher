@@ -26,10 +26,12 @@ export default function MatchesPage() {
   // for the item the student clicked instead of always showing the first match.
   useEffect(() => {
     const requestedId = new URLSearchParams(window.location.search).get('scholarship');
-    if (requestedId && matches.some((m) => m.score.scholarship_id === requestedId)) {
-      setSelectedId(requestedId);
-      setShowWhyNot(false);
-    }
+    const requestedMatch = requestedId && matches.some((m) => m.score.scholarship_id === requestedId);
+    // With no explicit scholarship in the URL, always follow the current top
+    // match. This matters when the saved profile finishes loading after the
+    // first render and changes the ranking.
+    setSelectedId(requestedMatch ? requestedId : matches[0]?.score.scholarship_id ?? '');
+    setShowWhyNot(false);
   }, [matches]);
 
   const selected = matches.find((m) => m.score.scholarship_id === selectedId) ?? matches[0];
