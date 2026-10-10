@@ -263,6 +263,23 @@ export function clearChatHistory(): void {
   }
 }
 
+/**
+ * Build the grounded context string sent to the server-side AI.
+ * Retrieves the most relevant chunks for the question, capped so the
+ * prompt stays within a small context window.
+ */
+export function buildCopilotContext(
+  question: string,
+  scholarships: Scholarship[],
+  profile: Profile,
+  applications: Application[]
+): string {
+  const kb = buildKnowledgeBase(scholarships, profile, applications);
+  const retrieved = retrieveChunks(question, kb, 6);
+  const parts = retrieved.map((r, i) => `[${i + 1}] (${r.chunk.source_type}) ${r.chunk.text}`);
+  return parts.join('\n\n');
+}
+
 export function makeChatMessage(
   role: ChatMessage['role'],
   content: string,

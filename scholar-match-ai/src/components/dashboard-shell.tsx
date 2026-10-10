@@ -22,12 +22,14 @@ import {
   Menu,
   X,
   Award,
+  ClipboardList,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Scholarships', href: '/dashboard/scholarships', icon: Search },
   { name: 'My Matches', href: '/dashboard/matches', icon: Target },
+  { name: 'Tracker', href: '/dashboard/tracker', icon: ClipboardList },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
   { name: 'Documents', href: '/dashboard/documents', icon: FileText },
   { name: 'Readiness', href: '/dashboard/readiness', icon: Award },

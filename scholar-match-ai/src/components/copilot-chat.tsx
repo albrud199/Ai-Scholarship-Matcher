@@ -11,6 +11,7 @@ import {
   saveChatHistory,
   makeChatMessage,
   COPILOT_SUGGESTIONS,
+  buildCopilotContext,
 } from '@/lib/chat-service';
 import { seedScholarships, studentProfile, studentApplications } from '@/lib/mock-data';
 import type { ChatMessage, Citation } from '@/types';
@@ -90,6 +91,7 @@ export function ChatPanel({ className, compact = false }: { className?: string; 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const streamRef = useRef<string>('');
 
   useEffect(() => {
     setMessages(loadChatHistory());
@@ -99,7 +101,7 @@ export function ChatPanel({ className, compact = false }: { className?: string; 
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const question = (text ?? input).trim();
     if (!question || isTyping) return;
 
@@ -109,15 +111,65 @@ export function ChatPanel({ className, compact = false }: { className?: string; 
     setInput('');
     setIsTyping(true);
 
-    // Retrieval + grounded generation (deterministic, local RAG pipeline).
-    setTimeout(() => {
-      const answer = generateGroundedAnswer(question, seedScholarships, studentProfile, studentApplications);
-      const assistantMsg = makeChatMessage('assistant', answer.content, answer.citations);
-      const withAnswer = [...next, assistantMsg];
-      setMessages(withAnswer);
-      saveChatHistory(withAnswer);
-      setIsTyping(false);
-    }, 700);
+    // Grounded, streaming AI: retrieval builds the context, Gemini generates,
+    // deterministic fallback answers when AI is unavailable.
+    const context = buildCopilotContext(question, seedScholarships, studentProfile, studentApplications);
+    const retrieval = generateGroundedAnswer(question, seedScholarships, studentProfile, studentApplications);
+
+    const assistantMsg = makeChatMessage('assistant', '');
+    const withPlaceholder = [...next, assistantMsg];
+    setMessages(withPlaceholder);
+    setIsTyping(false);
+
+    const updateLast = (patch: Partial<ChatMessage>) => {
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { ...copy[copy.length - 1], ...patch };
+        return copy;
+      });
+    };
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            ...next.slice(-5).map((m) => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              text: m.content,
+            })),
+          ],
+          context,
+        }),
+      });
+
+      if (!res.ok || !res.body) throw new Error('AI unavailable');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      streamRef.current = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        streamRef.current += decoder.decode(value, { stream: true });
+        updateLast({ content: streamRef.current, citations: retrieval.citations });
+      }
+    } catch {
+      // Deterministic RAG fallback — always answers, even without an API key.
+      updateLast({ content: retrieval.content, citations: retrieval.citations });
+    }
+
+    setMessages((prev) => {
+      const finalMessages = [...prev];
+      const last = finalMessages[finalMessages.length - 1];
+      if (!last.content.trim()) {
+        last.content = retrieval.content;
+        last.citations = retrieval.citations;
+      }
+      saveChatHistory(finalMessages);
+      return finalMessages;
+    });
   };
 
   const clear = () => {
