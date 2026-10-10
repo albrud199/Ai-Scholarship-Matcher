@@ -42,10 +42,13 @@ export default function LoginPage() {
     try {
       if (!supabase) throw new Error('Supabase is not configured');
       const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-      if (error) throw error;
+      if (error) {
+        setGeneralError(`Sign in failed: ${error.message || 'Invalid email or password'}`);
+        return;
+      }
       router.push('/dashboard');
     } catch (error) {
-      setGeneralError(error instanceof Error ? error.message : 'Invalid email or password. Please try again.');
+      setGeneralError(`Sign in failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +60,16 @@ export default function LoginPage() {
       if (!supabase) throw new Error('Supabase is not configured');
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
-      if (error) throw error;
+      if (error) {
+        setGeneralError(`OAuth login failed for ${provider}: ${error.message || 'Unknown error'}`);
+        return;
+      }
     } catch (error) {
-      setGeneralError(error instanceof Error ? error.message : `Failed to sign in with ${provider}. Please try again.`);
+      setGeneralError(`OAuth login failed for ${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }

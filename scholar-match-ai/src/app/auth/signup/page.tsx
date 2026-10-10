@@ -57,7 +57,7 @@ export default function SignupPage() {
       window.localStorage.removeItem('scholarmatch:chat-history');
       router.push(data.session ? '/dashboard?welcome=true' : '/auth/login?check-email=true');
     } catch (error) {
-      setGeneralError(error instanceof Error ? error.message : 'Failed to create account. Please try again.');
+      setGeneralError(`Failed to create account: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +75,7 @@ export default function SignupPage() {
       // A new account must not inherit demo chat data from this browser.
       window.localStorage.removeItem('scholarmatch:chat-history');
     } catch (error) {
-      setGeneralError(error instanceof Error ? error.message : `Failed to sign in with ${provider}. Please try again.`);
+      setGeneralError(`Failed to sign in with ${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
